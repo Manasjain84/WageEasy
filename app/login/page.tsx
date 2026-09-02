@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Factory, Phone, KeyRound, ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
+import { Factory, Mail, KeyRound, ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { supabase } from "@/lib/supabase";
@@ -11,52 +11,39 @@ import { getUserProfile, setAuthCookies } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("");
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Format phone to standard E.164 format (defaults to +91 if no country code provided)
-  const formatPhoneNumber = (input: string): string => {
-    const trimmed = input.trim().replace(/[\s-]/g, "");
-    if (trimmed.startsWith("+")) {
-      return trimmed;
-    }
-    // If 10 digits without leading +, prefix default +91
-    if (/^\d{10}$/.test(trimmed)) {
-      return `+91${trimmed}`;
-    }
-    return `+${trimmed}`;
-  };
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!phone || phone.trim().length < 10) {
-      setErrorMsg("Please enter a valid 10-digit mobile phone number.");
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setErrorMsg("Please enter a valid email address.");
       return;
     }
 
-    const formattedPhone = formatPhoneNumber(phone);
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        email: cleanEmail,
       });
 
       if (error) {
         throw error;
       }
 
-      setSuccessMsg(`OTP code sent successfully to ${formattedPhone}`);
+      setSuccessMsg(`Verification code sent to ${cleanEmail}`);
       setStep("otp");
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to send OTP. Please check the number and try again.");
+      setErrorMsg(err.message || "Failed to send verification code. Please check your email and try again.");
     } finally {
       setLoading(false);
     }
@@ -72,14 +59,14 @@ export default function LoginPage() {
       return;
     }
 
-    const formattedPhone = formatPhoneNumber(phone);
+    const cleanEmail = email.trim().toLowerCase();
     setLoading(true);
 
     try {
       const { data, error } = await supabase.auth.verifyOtp({
-        phone: formattedPhone,
+        email: cleanEmail,
         token: otp.trim(),
-        type: "sms",
+        type: "email",
       });
 
       if (error) {
@@ -89,7 +76,7 @@ export default function LoginPage() {
       if (data?.user) {
         // Query user's role and organization status
         const profile = await getUserProfile(data.user.id);
-        profile.phone = formattedPhone;
+        profile.email = cleanEmail;
         setAuthCookies(profile);
 
         if (profile.role === "employer") {
@@ -111,7 +98,7 @@ export default function LoginPage() {
         router.push("/signup");
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Invalid or expired OTP code. Please try again.");
+      setErrorMsg(err.message || "Invalid or expired verification code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -123,15 +110,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const formattedPhone = formatPhoneNumber(phone);
+      const cleanEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        email: cleanEmail,
       });
 
       if (error) throw error;
-      setSuccessMsg(`New OTP sent to ${formattedPhone}`);
+      setSuccessMsg(`New code sent to ${cleanEmail}`);
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to resend OTP. Please wait a moment and try again.");
+      setErrorMsg(err.message || "Failed to resend code. Please wait a moment and try again.");
     } finally {
       setLoading(false);
     }
@@ -170,31 +157,31 @@ export default function LoginPage() {
             </div>
           )}
 
-          {step === "phone" ? (
+          {step === "email" ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
               <div>
                 <label
-                  htmlFor="phone"
+                  htmlFor="email"
                   className="block text-sm font-semibold text-slate-700 mb-1.5"
                 >
-                  Mobile Phone Number
+                  Work or Personal Email
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Phone className="w-5 h-5" />
+                    <Mail className="w-5 h-5" />
                   </div>
                   <input
-                    id="phone"
-                    type="tel"
-                    placeholder="e.g. 9876543210 or +919876543210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="name@company.com or personal@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                     className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-300 rounded-xl text-base text-slate-900 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600 placeholder:text-slate-400 font-medium"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  We will send a 6-digit one-time password (OTP) via SMS.
+                  We will send a 6-digit one-time password (OTP) to your email.
                 </p>
               </div>
 
@@ -204,7 +191,7 @@ export default function LoginPage() {
                 isLoading={loading}
                 className="w-full py-3.5 text-base flex items-center justify-center gap-2"
               >
-                <span>Send OTP Code</span>
+                <span>Send Verification Code</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
@@ -212,8 +199,8 @@ export default function LoginPage() {
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="text-center mb-2">
                 <p className="text-xs text-slate-600">
-                  Enter 6-digit OTP code sent to{" "}
-                  <strong className="text-slate-900 font-bold">{phone}</strong>
+                  Enter 6-digit verification code sent to{" "}
+                  <strong className="text-slate-900 font-bold">{email}</strong>
                 </p>
               </div>
 
@@ -266,14 +253,14 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setStep("phone");
+                    setStep("email");
                     setOtp("");
                     setErrorMsg(null);
                     setSuccessMsg(null);
                   }}
                   className="text-xs text-slate-500 hover:text-slate-800 underline font-medium"
                 >
-                  Change phone number
+                  Change email address
                 </button>
               </div>
             </form>

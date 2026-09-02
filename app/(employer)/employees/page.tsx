@@ -21,12 +21,13 @@ export default function EmployerEmployeesPage() {
   const [pendingRequests, setPendingRequests] = useState<Employee[]>([]);
   const [assignedRates, setAssignedRates] = useState<Record<string, number>>({});
 
-  // Fallback initial data if database is empty during scaffolding test
+  // Fallback initial data if database is empty during test
   const fallbackActive: Employee[] = [
     {
       id: "e1",
       org_id: "demo-org",
       name: "Ramesh Kumar",
+      email: "ramesh.kumar@factory.com",
       phone: "+91 98765 43210",
       wage_rate: 700,
       role: "worker",
@@ -37,6 +38,7 @@ export default function EmployerEmployeesPage() {
       id: "e2",
       org_id: "demo-org",
       name: "Sunil Verma",
+      email: "sunil.verma@gmail.com",
       phone: "+91 98765 43211",
       wage_rate: 750,
       role: "worker",
@@ -47,6 +49,7 @@ export default function EmployerEmployeesPage() {
       id: "e3",
       org_id: "demo-org",
       name: "Amit Patel",
+      email: "amit.patel@factory.com",
       phone: "+91 98765 43212",
       wage_rate: 650,
       role: "worker",
@@ -60,6 +63,7 @@ export default function EmployerEmployeesPage() {
       id: "p1",
       org_id: "demo-org",
       name: "Suresh Patil",
+      email: "suresh.patil@outlook.com",
       phone: "+91 98765 11111",
       wage_rate: 650,
       role: "worker",
@@ -70,6 +74,7 @@ export default function EmployerEmployeesPage() {
       id: "p2",
       org_id: "demo-org",
       name: "Manoj Yadav",
+      email: "manoj.yadav@gmail.com",
       phone: "+91 98765 22222",
       wage_rate: 600,
       role: "worker",
@@ -203,7 +208,8 @@ export default function EmployerEmployeesPage() {
   const filteredActive = activeEmployees.filter(
     (emp) =>
       emp.name.toLowerCase().includes(search.toLowerCase()) ||
-      emp.phone.includes(search)
+      (emp.email && emp.email.toLowerCase().includes(search.toLowerCase())) ||
+      (emp.phone && emp.phone.includes(search))
   );
 
   return (
@@ -292,7 +298,7 @@ export default function EmployerEmployeesPage() {
               <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search worker by name or phone..."
+                placeholder="Search worker by name, email or phone..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-48 sm:w-64"
@@ -310,7 +316,7 @@ export default function EmployerEmployeesPage() {
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-y border-slate-200">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Name</th>
-                    <th className="py-3 px-4 font-semibold">Phone</th>
+                    <th className="py-3 px-4 font-semibold">Contact</th>
                     <th className="py-3 px-4 font-semibold">Daily Wage Rate</th>
                     <th className="py-3 px-4 font-semibold">Joined Date</th>
                     <th className="py-3 px-4 font-semibold">Status</th>
@@ -323,8 +329,8 @@ export default function EmployerEmployeesPage() {
                       <td className="py-3 px-4 font-semibold text-slate-900">
                         {emp.name}
                       </td>
-                      <td className="py-3 px-4 text-xs font-mono text-slate-500">
-                        {emp.phone}
+                      <td className="py-3 px-4 text-xs font-mono text-slate-600">
+                        {emp.email || emp.phone || "--"}
                       </td>
                       <td className="py-3 px-4 font-black text-emerald-700">
                         ₹ {emp.wage_rate} / day
@@ -380,7 +386,7 @@ export default function EmployerEmployeesPage() {
                       <StatusPill status="pending" size="sm" />
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Phone: <span className="font-mono text-slate-800 font-semibold">{req.phone}</span> •{" "}
+                      Contact: <span className="font-mono text-slate-800 font-semibold">{req.email || req.phone}</span> •{" "}
                       Requested: {new Date(req.joined_at).toLocaleDateString("en-IN", {
                         day: "numeric",
                         month: "short",

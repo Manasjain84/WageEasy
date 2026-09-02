@@ -29,7 +29,8 @@ export interface Employee {
   org_id: string;
   auth_user_id?: string | null;
   name: string;
-  phone: string;
+  email?: string | null;
+  phone?: string | null;
   photo_url?: string | null;
   wage_rate: number;
   role: UserRole;

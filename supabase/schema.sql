@@ -54,13 +54,13 @@ CREATE TABLE IF NOT EXISTS employees (
     org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(20),
     photo_url TEXT,
     wage_rate NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     role user_role NOT NULL DEFAULT 'worker',
     status employee_status NOT NULL DEFAULT 'pending',
     joined_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    CONSTRAINT unique_org_employee_phone UNIQUE (org_id, phone),
     CONSTRAINT unique_auth_user_id UNIQUE (auth_user_id)
 );
 
@@ -118,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_organizations_owner_id ON organizations(owner_id)
 CREATE INDEX IF NOT EXISTS idx_organizations_join_code ON organizations(join_code);
 CREATE INDEX IF NOT EXISTS idx_employees_org_id ON employees(org_id);
 CREATE INDEX IF NOT EXISTS idx_employees_auth_user_id ON employees(auth_user_id);
-CREATE INDEX IF NOT EXISTS idx_employees_phone ON employees(phone);
+CREATE INDEX IF NOT EXISTS idx_employees_email ON employees(email);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE INDEX IF NOT EXISTS idx_attendance_records_employee_id ON attendance_records(employee_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_records_org_id ON attendance_records(org_id);

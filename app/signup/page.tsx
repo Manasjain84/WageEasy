@@ -11,9 +11,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  ShieldAlert,
   LogOut,
-  Phone,
+  Mail,
   KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/Button";
@@ -31,9 +30,9 @@ export default function SignupPage() {
   const [pendingOrgName, setPendingOrgName] = useState<string | null>(null);
   const [isPendingWorker, setIsPendingWorker] = useState(false);
 
-  // Unauthenticated phone OTP fallback state (if visited directly without login)
-  const [authStep, setAuthStep] = useState<"phone" | "otp">("phone");
-  const [authPhone, setAuthPhone] = useState("");
+  // Unauthenticated email OTP fallback state (if visited directly without login)
+  const [authStep, setAuthStep] = useState<"email" | "otp">("email");
+  const [authEmail, setAuthEmail] = useState("");
   const [authOtp, setAuthOtp] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -50,6 +49,7 @@ export default function SignupPage() {
 
   // Worker state
   const [workerName, setWorkerName] = useState("");
+  const [workerPhone, setWorkerPhone] = useState("");
   const [joinCode, setJoinCode] = useState("");
 
   // Check auth session on load
@@ -102,31 +102,23 @@ export default function SignupPage() {
     return result;
   };
 
-  // Helper: Format phone
-  const formatPhoneNumber = (input: string): string => {
-    const trimmed = input.trim().replace(/[\s-]/g, "");
-    if (trimmed.startsWith("+")) return trimmed;
-    if (/^\d{10}$/.test(trimmed)) return `+91${trimmed}`;
-    return `+${trimmed}`;
-  };
-
-  // Direct Phone OTP handlers for unauthenticated users on signup
+  // Direct Email OTP handlers for unauthenticated users on signup
   const handleSendSignupOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (!authPhone || authPhone.trim().length < 10) {
-      setErrorMsg("Please enter a valid 10-digit mobile number.");
+    const clean = authEmail.trim().toLowerCase();
+    if (!clean || !clean.includes("@")) {
+      setErrorMsg("Please enter a valid email address.");
       return;
     }
-    const formatted = formatPhoneNumber(authPhone);
     setAuthLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ phone: formatted });
+      const { error } = await supabase.auth.signInWithOtp({ email: clean });
       if (error) throw error;
-      setSuccessMsg(`OTP sent to ${formatted}`);
+      setSuccessMsg(`Verification code sent to ${clean}`);
       setAuthStep("otp");
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to send OTP.");
+      setErrorMsg(err.message || "Failed to send verification code.");
     } finally {
       setAuthLoading(false);
     }
@@ -136,16 +128,16 @@ export default function SignupPage() {
     e.preventDefault();
     setErrorMsg(null);
     if (!authOtp || authOtp.trim().length < 6) {
-      setErrorMsg("Please enter the 6-digit OTP.");
+      setErrorMsg("Please enter the 6-digit verification code.");
       return;
     }
-    const formatted = formatPhoneNumber(authPhone);
+    const clean = authEmail.trim().toLowerCase();
     setAuthLoading(true);
     try {
       const { data, error } = await supabase.auth.verifyOtp({
-        phone: formatted,
+        email: clean,
         token: authOtp.trim(),
-        type: "sms",
+        type: "email",
       });
       if (error) throw error;
       if (data?.user) {
@@ -165,7 +157,7 @@ export default function SignupPage() {
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Invalid OTP code.");
+      setErrorMsg(err.message || "Invalid verification code.");
     } finally {
       setAuthLoading(false);
     }
@@ -178,7 +170,7 @@ export default function SignupPage() {
     setSuccessMsg(null);
 
     if (!currentUser?.id) {
-      setErrorMsg("Please verify your phone number before creating an organization.");
+      setErrorMsg("Please verify your email before creating an organization.");
       return;
     }
 
@@ -191,7 +183,7 @@ export default function SignupPage() {
 
     try {
       const generatedCode = generateJoinCode();
-      const userPhone = currentUser.phone || authPhone;
+      const userEmail = currentUser.email || authEmail.trim().toLowerCase();
 
       // 1. Insert into organizations table
       const { data: orgData, error: orgError } = await supabase
@@ -220,7 +212,7 @@ export default function SignupPage() {
         org_id: orgData.id,
         auth_user_id: currentUser.id,
         name: employerName.trim() || `${orgName.trim()} Admin`,
-        phone: userPhone,
+        email: userEmail,
         role: "employer",
         status: "active",
         wage_rate: 0,
@@ -236,6 +228,7 @@ export default function SignupPage() {
         role: "employer",
         status: "active",
         orgId: orgData.id,
+        email: userEmail,
       });
 
       router.push("/dashboard");
@@ -253,7 +246,7 @@ export default function SignupPage() {
     setSuccessMsg(null);
 
     if (!currentUser?.id) {
-      setErrorMsg("Please verify your phone number before submitting a join request.");
+      setErrorMsg("Please verify your email before submitting a join request.");
       return;
     }
 
@@ -285,14 +278,15 @@ export default function SignupPage() {
         );
       }
 
-      const userPhone = currentUser.phone || authPhone;
+      const userEmail = currentUser.email || authEmail.trim().toLowerCase();
 
       // 2. Insert employee request with status 'pending'
       const { error: insertError } = await supabase.from("employees").insert({
         org_id: orgData.id,
         auth_user_id: currentUser.id,
         name: workerName.trim(),
-        phone: userPhone,
+        email: userEmail,
+        phone: workerPhone.trim() || null,
         role: "worker",
         status: "pending",
         wage_rate: 0,
@@ -300,7 +294,7 @@ export default function SignupPage() {
 
       if (insertError) {
         // If already submitted
-        if (insertError.message.includes("unique") || insertError.code === "23505") {
+        if (insertError.message?.includes("unique") || insertError.code === "23505") {
           setIsPendingWorker(true);
           setPendingOrgName(orgData.name);
           return;
@@ -314,6 +308,7 @@ export default function SignupPage() {
         role: "worker",
         status: "pending",
         orgId: orgData.id,
+        email: userEmail,
       });
 
       setPendingOrgName(orgData.name);
@@ -376,7 +371,7 @@ export default function SignupPage() {
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> What happens next?
               </p>
               <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                <li>Your supervisor will verify your details and assign your daily wage rate.</li>
+                <li>Your supervisor will verify your email and assign your daily wage rate.</li>
                 <li>Once approved, you can immediately start scanning QR codes to log attendance.</li>
               </ul>
             </div>
@@ -402,7 +397,7 @@ export default function SignupPage() {
     );
   }
 
-  // State B: Unauthenticated User - Prompt Phone OTP first
+  // State B: Unauthenticated User - Prompt Email OTP first
   if (!currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
@@ -412,7 +407,7 @@ export default function SignupPage() {
               Join or Create Factory
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Verify your mobile number to get started
+              Verify your email address to get started
             </p>
           </div>
 
@@ -424,21 +419,21 @@ export default function SignupPage() {
               </div>
             )}
 
-            {authStep === "phone" ? (
+            {authStep === "email" ? (
               <form onSubmit={handleSendSignupOtp} className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Phone Number
+                    Email Address
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Phone className="w-5 h-5" />
+                      <Mail className="w-5 h-5" />
                     </div>
                     <input
-                      type="tel"
-                      placeholder="10-digit mobile number"
-                      value={authPhone}
-                      onChange={(e) => setAuthPhone(e.target.value)}
+                      type="email"
+                      placeholder="name@example.com"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
                       required
                       className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-300 rounded-xl text-base text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
                     />
@@ -451,14 +446,14 @@ export default function SignupPage() {
                   isLoading={authLoading}
                   className="w-full py-3.5 text-base flex items-center justify-center gap-2"
                 >
-                  <span>Continue with Phone OTP</span>
+                  <span>Continue with Email Code</span>
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </form>
             ) : (
               <form onSubmit={handleVerifySignupOtp} className="space-y-4">
                 <p className="text-xs text-slate-600 text-center">
-                  Enter 6-digit OTP code sent to <strong>{authPhone}</strong>
+                  Enter 6-digit verification code sent to <strong>{authEmail}</strong>
                 </p>
                 <div>
                   <div className="relative">
@@ -488,10 +483,10 @@ export default function SignupPage() {
 
                 <button
                   type="button"
-                  onClick={() => setAuthStep("phone")}
+                  onClick={() => setAuthStep("email")}
                   className="w-full text-center text-xs text-slate-500 hover:text-slate-800 underline"
                 >
-                  Change phone number
+                  Change email address
                 </button>
               </form>
             )}
@@ -519,7 +514,7 @@ export default function SignupPage() {
             Set Up Your Account
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Verified as <strong className="text-slate-900">{currentUser.phone}</strong>
+            Verified as <strong className="text-slate-900">{currentUser.email}</strong>
           </p>
         </div>
 
@@ -667,6 +662,19 @@ export default function SignupPage() {
                   value={workerName}
                   onChange={(e) => setWorkerName(e.target.value)}
                   required
+                  className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Phone Number (Optional)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={workerPhone}
+                  onChange={(e) => setWorkerPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
                 />
               </div>

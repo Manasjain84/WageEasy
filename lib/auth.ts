@@ -12,6 +12,7 @@ export interface UserProfile {
   orgName?: string | null;
   employeeId?: string | null;
   name?: string | null;
+  email?: string | null;
   phone?: string | null;
 }
 
@@ -85,10 +86,17 @@ export function clearAuthCookies() {
  */
 export async function getUserProfile(userId?: string): Promise<UserProfile> {
   let targetUserId = userId;
+  let authUserEmail: string | undefined = undefined;
 
   if (!targetUserId) {
     const { data: authData } = await supabase.auth.getUser();
     targetUserId = authData.user?.id;
+    authUserEmail = authData.user?.email;
+  } else {
+    const { data: authData } = await supabase.auth.getUser();
+    if (authData.user?.id === targetUserId) {
+      authUserEmail = authData.user?.email;
+    }
   }
 
   if (!targetUserId) {
@@ -114,13 +122,14 @@ export async function getUserProfile(userId?: string): Promise<UserProfile> {
       status: "active",
       orgId: orgData.id,
       orgName: orgData.name,
+      email: authUserEmail,
     };
   }
 
   // 2. Check if user is an employee (Worker or Supervisor)
   const { data: empData } = await supabase
     .from("employees")
-    .select("id, org_id, name, phone, role, status")
+    .select("id, org_id, name, email, phone, role, status")
     .eq("auth_user_id", targetUserId)
     .maybeSingle();
 
@@ -132,16 +141,18 @@ export async function getUserProfile(userId?: string): Promise<UserProfile> {
       orgId: empData.org_id,
       employeeId: empData.id,
       name: empData.name,
+      email: empData.email || authUserEmail,
       phone: empData.phone,
     };
   }
 
-  // 3. User is authenticated with Supabase phone OTP, but not in any org yet
+  // 3. User is authenticated with Supabase email OTP, but not in any org yet
   return {
     userId: targetUserId,
     role: null,
     status: null,
     orgId: null,
+    email: authUserEmail,
   };
 }
 

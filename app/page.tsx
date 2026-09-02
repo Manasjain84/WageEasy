@@ -45,7 +45,7 @@ export default function HomePage() {
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
         <Link href="/login" className="flex-1">
           <Button variant="primary" className="w-full py-3.5 text-base flex items-center gap-2">
-            <span>Log In (Phone + OTP)</span>
+            <span>Log In (Email + OTP)</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         </Link>
