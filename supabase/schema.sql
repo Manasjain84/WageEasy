@@ -6,15 +6,35 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. ENUM TYPES
-CREATE TYPE employee_status AS ENUM ('pending', 'active', 'inactive');
-CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'incomplete');
-CREATE TYPE payroll_cycle_status AS ENUM ('draft', 'approved', 'paid');
-CREATE TYPE user_role AS ENUM ('employer', 'worker');
+DO $$ BEGIN
+    CREATE TYPE employee_status AS ENUM ('pending', 'active', 'inactive');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE attendance_status AS ENUM ('present', 'absent', 'incomplete');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE payroll_cycle_status AS ENUM ('draft', 'approved', 'paid');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('employer', 'worker');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- 2. ORGANIZATIONS TABLE
--- Stores factory / enterprise details and custom wage/overtime rules
+-- Stores factory / enterprise details, join code, owner link to auth.users, and custom wage rules
 CREATE TABLE IF NOT EXISTS organizations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     address TEXT,
     join_code VARCHAR(12) NOT NULL UNIQUE,
@@ -32,14 +52,16 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS employees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-    auth_user_id UUID UNIQUE, -- Maps to Supabase auth.users(id)
+    auth_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL UNIQUE,
+    phone VARCHAR(20) NOT NULL,
     photo_url TEXT,
     wage_rate NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     role user_role NOT NULL DEFAULT 'worker',
     status employee_status NOT NULL DEFAULT 'pending',
-    joined_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    CONSTRAINT unique_org_employee_phone UNIQUE (org_id, phone),
+    CONSTRAINT unique_auth_user_id UNIQUE (auth_user_id)
 );
 
 -- 4. ATTENDANCE RECORDS TABLE
@@ -92,7 +114,10 @@ CREATE TABLE IF NOT EXISTS payslips (
 -- ==============================================================================
 -- INDEXES FOR QUERY OPTIMIZATION
 -- ==============================================================================
+CREATE INDEX IF NOT EXISTS idx_organizations_owner_id ON organizations(owner_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_join_code ON organizations(join_code);
 CREATE INDEX IF NOT EXISTS idx_employees_org_id ON employees(org_id);
+CREATE INDEX IF NOT EXISTS idx_employees_auth_user_id ON employees(auth_user_id);
 CREATE INDEX IF NOT EXISTS idx_employees_phone ON employees(phone);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE INDEX IF NOT EXISTS idx_attendance_records_employee_id ON attendance_records(employee_id);
@@ -111,5 +136,62 @@ ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payroll_cycles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payslips ENABLE ROW LEVEL SECURITY;
 
--- Note: Specific granular RLS policies mapping auth.uid() to employees and organizations
--- should be applied when deploying to production with Supabase Auth.
+-- 1. Organizations Policies
+CREATE POLICY "Allow authenticated users to read organizations by join code"
+ON organizations FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY "Allow users to create organizations"
+ON organizations FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = owner_id);
+
+CREATE POLICY "Allow owners to update their organization"
+ON organizations FOR UPDATE
+TO authenticated
+USING (auth.uid() = owner_id)
+WITH CHECK (auth.uid() = owner_id);
+
+-- 2. Employees Policies
+CREATE POLICY "Allow users to read their own employee profile or their org members"
+ON employees FOR SELECT
+TO authenticated
+USING (
+    auth_user_id = auth.uid() OR
+    org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid())
+);
+
+CREATE POLICY "Allow authenticated users to create employee profile"
+ON employees FOR INSERT
+TO authenticated
+WITH CHECK (auth_user_id = auth.uid() OR org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid()));
+
+CREATE POLICY "Allow org owners to update employee status and wages"
+ON employees FOR UPDATE
+TO authenticated
+USING (org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid()))
+WITH CHECK (org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid()));
+
+-- 3. Attendance Policies
+CREATE POLICY "Workers can read and insert their own attendance"
+ON attendance_records FOR ALL
+TO authenticated
+USING (
+    employee_id IN (SELECT id FROM employees WHERE auth_user_id = auth.uid()) OR
+    org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid())
+);
+
+-- 4. Payroll & Payslips Policies
+CREATE POLICY "Owners can manage payroll cycles and payslips"
+ON payroll_cycles FOR ALL
+TO authenticated
+USING (org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid()));
+
+CREATE POLICY "Workers can read their own payslips"
+ON payslips FOR SELECT
+TO authenticated
+USING (
+    employee_id IN (SELECT id FROM employees WHERE auth_user_id = auth.uid()) OR
+    payroll_cycle_id IN (SELECT id FROM payroll_cycles WHERE org_id IN (SELECT id FROM organizations WHERE owner_id = auth.uid()))
+);

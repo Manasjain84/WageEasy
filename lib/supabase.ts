@@ -1,4 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient as createSSRBrowserClient } from "@supabase/ssr";
 
 // Types matching the Postgres schema
 export type EmployeeStatus = "pending" | "active" | "inactive";
@@ -15,6 +16,7 @@ export interface WageRules {
 
 export interface Organization {
   id: string;
+  owner_id?: string | null;
   name: string;
   address?: string | null;
   join_code: string;
@@ -73,48 +75,21 @@ export interface Payslip {
   generated_at: string;
 }
 
-export type Database = {
-  public: {
-    Tables: {
-      organizations: {
-        Row: Organization;
-        Insert: Omit<Organization, "id" | "created_at"> & { id?: string; created_at?: string };
-        Update: Partial<Organization>;
-      };
-      employees: {
-        Row: Employee;
-        Insert: Omit<Employee, "id" | "joined_at"> & { id?: string; joined_at?: string };
-        Update: Partial<Employee>;
-      };
-      attendance_records: {
-        Row: AttendanceRecord;
-        Insert: Omit<AttendanceRecord, "id" | "created_at"> & { id?: string; created_at?: string };
-        Update: Partial<AttendanceRecord>;
-      };
-      payroll_cycles: {
-        Row: PayrollCycle;
-        Insert: Omit<PayrollCycle, "id" | "created_at"> & { id?: string; created_at?: string };
-        Update: Partial<PayrollCycle>;
-      };
-      payslips: {
-        Row: Payslip;
-        Insert: Omit<Payslip, "id" | "generated_at"> & { id?: string; generated_at?: string };
-        Update: Partial<Payslip>;
-      };
-    };
-  };
-};
+export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+// Browser client using @supabase/ssr for client components
+export function createBrowserClient() {
+  return createSSRBrowserClient(supabaseUrl, supabaseAnonKey);
+}
 
-// Standard Supabase browser/client-side instance
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Global browser client singleton
+export const supabase = createBrowserClient();
 
 // Server-side service client factory
 export function createServiceClient() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
-  return createClient<Database>(supabaseUrl, serviceKey, {
+  return createSupabaseClient(supabaseUrl, serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
