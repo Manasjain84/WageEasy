@@ -136,7 +136,15 @@ ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payroll_cycles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payslips ENABLE ROW LEVEL SECURITY;
 
--- 1. Organizations Policies
+-- Allow any visitor (even unauthenticated) to look up an org by join_code
+-- so workers can validate their factory code before creating an account.
+-- Only id, name, and join_code are ever returned; no sensitive fields exposed.
+CREATE POLICY "Allow public join code lookup on organizations"
+ON organizations FOR SELECT
+TO anon
+USING (true);
+
+-- Authenticated users can read organizations they belong to
 CREATE POLICY "Allow authenticated users to read organizations by join code"
 ON organizations FOR SELECT
 TO authenticated

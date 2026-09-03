@@ -13,8 +13,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate random 8-character join code
-    const generatedCode = "FACT-" + Math.floor(1000 + Math.random() * 9000);
+    // Generate random 6-character uppercase alphanumeric join code (same format as signup page)
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const generatedCode = Array.from({ length: 6 }, () =>
+      chars.charAt(Math.floor(Math.random() * chars.length))
+    ).join("");
 
     return NextResponse.json({
       success: true,

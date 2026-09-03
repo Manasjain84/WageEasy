@@ -158,6 +158,9 @@ export default function SignupPage() {
 
       const generatedCode = generateJoinCode();
 
+      // DEBUG: Log the exact code being stored so employer-side mismatches are easy to spot
+      console.log("[CreateOrg] Generated join_code:", JSON.stringify(generatedCode), "length:", generatedCode.length);
+
       // 2. Insert into organizations table
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
@@ -254,22 +257,51 @@ export default function SignupPage() {
       // cleanCodePreview is already validated as 6-char uppercase alphanumeric above
       const cleanCode = cleanCodePreview;
 
-      // 1. Lookup organization by join_code first to validate
+      // DEBUG: Log the exact code being searched for
+      console.log("[JoinOrg] Looking up join_code:", JSON.stringify(cleanCode), "length:", cleanCode.length);
+
+      // STEP 1: Look up the organization by join code FIRST (before auth).
+      // The anon RLS policy on organizations allows this unauthenticated read.
       const { data: orgData, error: lookupError } = await supabase
         .from("organizations")
-        .select("id, name")
+        .select("id, name, join_code")
         .eq("join_code", cleanCode)
         .maybeSingle();
 
-      if (lookupError || !orgData) {
+      // DEBUG: Log what the DB returned so mismatches are visible in the console
+      console.log("[JoinOrg] Supabase lookup result:", { orgData, lookupError });
+
+      if (lookupError) {
+        console.error("[JoinOrg] DB error during lookup:", lookupError);
+        throw new Error(
+          `Database error while looking up join code. Please try again. (${lookupError.message})`
+        );
+      }
+
+      if (!orgData) {
+        console.warn(
+          "[JoinOrg] No org found for code:",
+          cleanCode,
+          "— possible causes: RLS blocking anon read (apply schema migration), wrong code, or code not yet in DB."
+        );
         throw new Error(
           `No organization found for join code "${cleanCode}". Please double-check the code with your supervisor.`
         );
       }
 
+      // DEBUG: Confirm what was stored in DB vs what worker entered
+      console.log(
+        "[JoinOrg] ✅ Org found:",
+        orgData.name,
+        "| stored join_code:",
+        JSON.stringify(orgData.join_code),
+        "| entered:",
+        JSON.stringify(cleanCode)
+      );
+
       let authUserId = currentUser?.id;
 
-      // 2. Sign up user in Supabase Auth if not already authenticated
+      // STEP 2: Sign up (or use existing session) — AFTER org lookup so auth state doesn't affect RLS on lookup
       if (!authUserId) {
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: cleanEmail,
@@ -288,7 +320,7 @@ export default function SignupPage() {
         setCurrentUser(authData.user);
       }
 
-      // 3. Insert employee request with status 'pending'
+      // STEP 3: Insert employee request with status 'pending'
       const { error: insertError } = await supabase.from("employees").insert({
         org_id: orgData.id,
         auth_user_id: authUserId,
@@ -301,7 +333,7 @@ export default function SignupPage() {
       });
 
       if (insertError) {
-        // If already submitted
+        // If already submitted (duplicate auth_user_id)
         if (insertError.message?.includes("unique") || insertError.code === "23505") {
           setIsPendingWorker(true);
           setPendingOrgName(orgData.name);
