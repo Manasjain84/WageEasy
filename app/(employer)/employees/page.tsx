@@ -143,7 +143,8 @@ export default function EmployerEmployeesPage() {
             status: "active",
             wage_rate: rate,
           })
-          .eq("id", employeeId);
+          .eq("id", employeeId)
+          .eq("org_id", orgId);
 
         if (error) throw error;
       }
@@ -162,6 +163,7 @@ export default function EmployerEmployeesPage() {
           type: "success",
           message: `Approved ${approvedEmp.name} at ₹${rate}/day. Worker can now log attendance.`,
         });
+        await fetchEmployees();
       }
     } catch (err: any) {
       setFeedback({

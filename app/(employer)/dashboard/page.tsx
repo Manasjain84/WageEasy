@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -12,67 +14,50 @@ import {
 import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
 import { Button } from "@/components/Button";
+import { getUserProfile } from "@/lib/auth";
+
+type AttendanceRow = {
+  id: string;
+  check_in_time: string | null;
+  check_out_time: string | null;
+  hours_worked: number;
+  ot_hours: number;
+  status: "present" | "absent" | "incomplete";
+  employee: { name: string; phone?: string | null } | null;
+};
 
 export default function EmployerDashboardPage() {
-  // Placeholder mock data for dashboard view
-  const stats = [
-    { label: "Total Active Workers", value: "48", icon: Users, color: "text-blue-600 bg-blue-50" },
-    { label: "Present Today", value: "42", icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50" },
-    { label: "Pending Approval", value: "3", icon: AlertCircle, color: "text-amber-600 bg-amber-50" },
-    { label: "Total OT Hours Today", value: "14.5 hrs", icon: Clock, color: "text-purple-600 bg-purple-50" },
-  ];
+  const [recentAttendance, setRecentAttendance] = useState<AttendanceRow[]>([]);
 
-  const recentAttendance = [
-    {
-      id: "1",
-      name: "Ramesh Kumar",
-      phone: "+91 98765 43210",
-      checkIn: "08:02 AM",
-      checkOut: "--",
-      hours: "5.5 hrs",
-      ot: "0.0 hrs",
-      status: "present",
-    },
-    {
-      id: "2",
-      name: "Sunil Verma",
-      phone: "+91 98765 43211",
-      checkIn: "07:55 AM",
-      checkOut: "04:30 PM",
-      hours: "8.0 hrs",
-      ot: "0.5 hrs",
-      status: "present",
-    },
-    {
-      id: "3",
-      name: "Amit Patel",
-      phone: "+91 98765 43212",
-      checkIn: "--",
-      checkOut: "--",
-      hours: "0.0 hrs",
-      ot: "0.0 hrs",
-      status: "absent",
-    },
-    {
-      id: "4",
-      name: "Pooja Devi",
-      phone: "+91 98765 43213",
-      checkIn: "08:15 AM",
-      checkOut: "--",
-      hours: "5.2 hrs",
-      ot: "0.0 hrs",
-      status: "present",
-    },
-    {
-      id: "5",
-      name: "Deepak Sharma",
-      phone: "+91 98765 43214",
-      checkIn: "08:00 AM",
-      checkOut: "01:00 PM",
-      hours: "5.0 hrs",
-      ot: "0.0 hrs",
-      status: "incomplete",
-    },
+  useEffect(() => {
+    let active = true;
+    const fetchAttendance = async () => {
+      const profile = await getUserProfile();
+      if (!profile.orgId) return;
+      const response = await fetch(
+        `/api/attendance?org_id=${encodeURIComponent(profile.orgId)}&date=${new Date().toISOString().split("T")[0]}`
+      );
+      if (!response.ok) throw new Error("Unable to load attendance.");
+      const result = await response.json();
+      if (active) setRecentAttendance(result.data || []);
+    };
+
+    fetchAttendance().catch((error) => console.error("Error loading dashboard attendance:", error));
+    const intervalId = window.setInterval(
+      () => fetchAttendance().catch((error) => console.error("Error refreshing dashboard attendance:", error)),
+      5000
+    );
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const stats = [
+    { label: "Total Active Workers", value: String(recentAttendance.length), icon: Users, color: "text-blue-600 bg-blue-50" },
+    { label: "Present Today", value: String(recentAttendance.filter((row) => row.check_in_time).length), icon: CheckCircle2, color: "text-emerald-600 bg-emerald-50" },
+    { label: "Pending Approval", value: "—", icon: AlertCircle, color: "text-amber-600 bg-amber-50" },
+    { label: "Total OT Hours Today", value: `${recentAttendance.reduce((sum, row) => sum + Number(row.ot_hours || 0), 0)} hrs`, icon: Clock, color: "text-purple-600 bg-purple-50" },
   ];
 
   return (
@@ -154,22 +139,22 @@ export default function EmployerDashboardPage() {
               {recentAttendance.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3 px-4 font-medium text-slate-900">
-                    {row.name}
+                   {row.employee?.name || "--"}
                   </td>
                   <td className="py-3 px-4 text-xs font-mono text-slate-500">
-                    {row.phone}
+                   {row.employee?.phone || "--"}
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-700">
-                    {row.checkIn}
+                   {row.check_in_time ? new Date(row.check_in_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "--"}
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-700">
-                    {row.checkOut}
+                   {row.check_out_time ? new Date(row.check_out_time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "--"}
                   </td>
                   <td className="py-3 px-4 font-semibold text-slate-800">
-                    {row.hours}
+                   {row.hours_worked} hrs
                   </td>
                   <td className="py-3 px-4 text-purple-700 font-semibold">
-                    {row.ot}
+                   {row.ot_hours} hrs
                   </td>
                   <td className="py-3 px-4">
                     <StatusPill status={row.status} size="sm" />

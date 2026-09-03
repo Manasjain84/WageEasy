@@ -94,6 +94,37 @@ export default function SignupPage() {
     checkSession();
   }, [router]);
 
+  useEffect(() => {
+    if (!isPendingWorker || !currentUser?.id) return;
+
+    const checkApprovalStatus = async () => {
+      const { data: employee, error } = await supabase
+        .from("employees")
+        .select("status, org_id")
+        .eq("auth_user_id", currentUser.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking employee approval status:", error);
+        return;
+      }
+
+      if (employee?.status === "active") {
+        setAuthCookies({
+          userId: currentUser.id,
+          role: "worker",
+          status: "active",
+          orgId: employee.org_id,
+        });
+        router.push("/home");
+      }
+    };
+
+    checkApprovalStatus();
+    const intervalId = window.setInterval(checkApprovalStatus, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [currentUser?.id, isPendingWorker, router]);
+
   // Helper: Generate a 6-character uppercase alphanumeric join code
   const generateJoinCode = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // excludes ambiguous 0/O, 1/I

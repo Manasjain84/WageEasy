@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile } from "@/lib/auth";
+import QRCode from "qrcode";
 
 export default function EmployerSettingsPage() {
   const [orgName, setOrgName] = useState("Precision Manufacturing Pvt Ltd");
@@ -16,6 +17,8 @@ export default function EmployerSettingsPage() {
   const [workDays, setWorkDays] = useState(26);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadOrganization() {
@@ -34,7 +37,9 @@ export default function EmployerSettingsPage() {
         throw error;
       }
 
+      setOrgId(profile.orgId);
       setJoinCode(data.join_code.trim().toUpperCase());
+      setQrCodeUrl(await QRCode.toDataURL(`wageeasy://check-in?org_id=${profile.orgId}`));
     }
 
     loadOrganization().catch((error) => {
@@ -90,6 +95,12 @@ export default function EmployerSettingsPage() {
               <span>{copied ? "Copied to Clipboard!" : "Copy Code"}</span>
             </button>
           </div>
+          {qrCodeUrl && (
+            <div className="mt-4 text-center">
+              <img src={qrCodeUrl} alt="Factory attendance QR code" className="mx-auto w-48 h-48" />
+              <p className="text-xs text-slate-500 mt-2">Workers scan this code to check in.</p>
+            </div>
+          )}
         </Card>
 
         {/* General Details Card */}
