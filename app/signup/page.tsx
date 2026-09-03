@@ -261,12 +261,16 @@ export default function SignupPage() {
       console.log("[JoinOrg] Looking up join_code:", JSON.stringify(cleanCode), "length:", cleanCode.length);
 
       // STEP 1: Look up the organization by join code FIRST (before auth).
-      // The anon RLS policy on organizations allows this unauthenticated read.
-      const { data: orgData, error: lookupError } = await supabase
-        .from("organizations")
-        .select("id, name, join_code")
-        .eq("join_code", cleanCode)
-        .maybeSingle();
+      // Use the server route so this works even when the deployed anon RLS
+      // policies have not been applied yet.
+      const lookupResponse = await fetch(
+        `/api/organizations?join_code=${encodeURIComponent(cleanCode)}`
+      );
+      const lookupResult = await lookupResponse.json();
+      const orgData = lookupResult.data;
+      const lookupError = lookupResponse.ok
+        ? null
+        : new Error(lookupResult.error || "Failed to look up organization");
 
       // DEBUG: Log what the DB returned so mismatches are visible in the console
       console.log("[JoinOrg] Supabase lookup result:", { orgData, lookupError });

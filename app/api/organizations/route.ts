@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase";
 
 // POST /api/organizations - Create new organization (Employer registration)
 export async function POST(request: NextRequest) {
@@ -59,13 +60,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { data: organization, error } = await createServiceClient()
+      .from("organizations")
+      .select("id, name, join_code")
+      .eq("join_code", joinCode)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!organization) {
+      return NextResponse.json(
+        { success: false, error: "No organization found for this join code" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      data: {
-        id: "placeholder-org-uuid",
-        name: "Precision Manufacturing Pvt Ltd",
-        join_code: joinCode,
-      },
+      data: organization,
       message: "Organization found.",
     });
   } catch (error: any) {
