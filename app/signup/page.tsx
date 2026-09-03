@@ -156,7 +156,7 @@ export default function SignupPage() {
         setCurrentUser(authData.user);
       }
 
-      const generatedCode = generateJoinCode();
+      const generatedCode = generateJoinCode().trim().toUpperCase();
 
       // DEBUG: Log the exact code being stored so employer-side mismatches are easy to spot
       console.log("[CreateOrg] Generated join_code:", JSON.stringify(generatedCode), "length:", generatedCode.length);

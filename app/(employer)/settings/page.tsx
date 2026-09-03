@@ -1,21 +1,49 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Settings, Copy, Check, Save } from "lucide-react";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
+import { supabase } from "@/lib/supabase";
+import { getUserProfile } from "@/lib/auth";
 
 export default function EmployerSettingsPage() {
   const [orgName, setOrgName] = useState("Precision Manufacturing Pvt Ltd");
   const [orgAddress, setOrgAddress] = useState("Plot 42, Industrial Area Phase II, Gurugram, Haryana");
-  const [joinCode] = useState("WAG8X2");
+  const [joinCode, setJoinCode] = useState<string | null>(null);
   const [dailyHours, setDailyHours] = useState(8);
   const [otMultiplier, setOtMultiplier] = useState(1.5);
   const [workDays, setWorkDays] = useState(26);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    async function loadOrganization() {
+      const profile = await getUserProfile();
+      if (!profile.orgId) {
+        throw new Error("Unable to determine the current organization.");
+      }
+
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("join_code")
+        .eq("id", profile.orgId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setJoinCode(data.join_code.trim().toUpperCase());
+    }
+
+    loadOrganization().catch((error) => {
+      console.error("Error loading organization join code:", error);
+    });
+  }, []);
+
   const handleCopyCode = () => {
+    if (!joinCode) return;
     navigator.clipboard.writeText(joinCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -50,7 +78,7 @@ export default function EmployerSettingsPage() {
                 Active Join Code
               </p>
               <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-950 tracking-widest mt-0.5">
-                {joinCode}
+                {joinCode || "Loading..."}
               </p>
             </div>
             <button

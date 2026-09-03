@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const generatedCode = Array.from({ length: 6 }, () =>
       chars.charAt(Math.floor(Math.random() * chars.length))
-    ).join("");
+    ).join("").trim().toUpperCase();
 
     return NextResponse.json({
       success: true,
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const joinCode = searchParams.get("join_code");
+    const joinCode = searchParams.get("join_code")?.trim().toUpperCase();
 
     if (!joinCode) {
       return NextResponse.json(
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       data: {
         id: "placeholder-org-uuid",
         name: "Precision Manufacturing Pvt Ltd",
-        join_code: joinCode.toUpperCase(),
+        join_code: joinCode,
       },
       message: "Organization found.",
     });
