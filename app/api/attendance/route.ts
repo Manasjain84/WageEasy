@@ -90,12 +90,22 @@ export async function POST(request: NextRequest) {
     const date = new Date().toISOString().split("T")[0];
     const { data: existing, error: existingError } = await supabase
       .from("attendance_records")
-      .select("id, check_in_time")
+      .select("id, check_in_time, check_out_time")
       .eq("employee_id", employee_id)
       .eq("date", date)
       .maybeSingle();
 
     if (existingError) throw existingError;
+
+    if (existing?.check_out_time) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Today's attendance is already complete",
+        },
+        { status: 409 }
+      );
+    }
 
     const checkIn = existing?.check_in_time || check_in_time || new Date().toISOString();
     const checkOut = check_out_time || null;

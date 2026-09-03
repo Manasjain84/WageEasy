@@ -11,7 +11,11 @@ import { Html5Qrcode } from "html5-qrcode";
 
 export default function WorkerHomePage() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [liveHours] = useState("0h 00m");
+  const [todayRecord, setTodayRecord] = useState<{
+    check_in_time: string | null;
+    check_out_time: string | null;
+    hours_worked: number | null;
+  } | null>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -20,6 +24,23 @@ export default function WorkerHomePage() {
   const [wageRate, setWageRate] = useState<number | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const processingScanRef = useRef(false);
+  const todayDate = () => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  };
+
+  const loadTodayAttendance = async (currentEmployeeId: string) => {
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select("id, check_in_time, check_out_time, hours_worked, status")
+      .eq("employee_id", currentEmployeeId)
+      .eq("date", todayDate())
+      .maybeSingle();
+    if (error) throw error;
+    setTodayRecord(data);
+    setIsCheckedIn(Boolean(data?.check_in_time && !data?.check_out_time));
+    return data;
+  };
 
   useEffect(() => {
     getUserProfile().then(async (profile) => {
@@ -34,17 +55,7 @@ export default function WorkerHomePage() {
         .single();
       if (employeeError) throw employeeError;
       setWageRate(employee?.wage_rate ?? null);
-      const response = await fetch(
-        `/api/attendance?org_id=${encodeURIComponent(profile.orgId)}&date=${new Date().toISOString().split("T")[0]}`
-      );
-      if (!response.ok) throw new Error("Unable to load today's attendance.");
-      const result = await response.json();
-      setIsCheckedIn(
-        result.data?.some(
-          (record: { employee_id: string; check_in_time: string | null }) =>
-            record.employee_id === profile.employeeId && record.check_in_time
-        ) || false
-      );
+      await loadTodayAttendance(profile.employeeId);
     }).catch((error) => setMessage(error.message));
 
     return () => {
@@ -52,6 +63,18 @@ export default function WorkerHomePage() {
       scannerRef.current?.clear();
     };
   }, []);
+
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      if (employeeId) {
+        loadTodayAttendance(employeeId).catch((error) =>
+          console.error("Error refreshing today's attendance:", error)
+        );
+      }
+    };
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, [employeeId]);
 
   const scanQrCode = async () => {
     if (!employeeId || !orgId) {
@@ -64,6 +87,12 @@ export default function WorkerHomePage() {
         userAgent: navigator.userAgent,
       });
       setMessage("Camera access requires HTTPS and a supported mobile browser.");
+      return;
+    }
+
+    const freshRecord = await loadTodayAttendance(employeeId);
+    if (freshRecord?.check_in_time && freshRecord.check_out_time) {
+      setMessage("आज की उपस्थिति पूरी हो गई है / Today's attendance is already complete");
       return;
     }
 
@@ -91,7 +120,16 @@ export default function WorkerHomePage() {
 
         processingScanRef.current = true;
         try {
-          const checkOutTime = isCheckedIn ? new Date().toISOString() : undefined;
+          const freshRecord = await loadTodayAttendance(employeeId);
+          if (freshRecord?.check_in_time && freshRecord.check_out_time) {
+            setMessage("आज की उपस्थिति पूरी हो गई है / Today's attendance is already complete");
+            setScanning(false);
+            await scanner.stop();
+            scanner.clear();
+            scannerRef.current = null;
+            return;
+          }
+          const checkOutTime = freshRecord?.check_in_time ? new Date().toISOString() : undefined;
           const response = await fetch("/api/attendance", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -105,7 +143,7 @@ export default function WorkerHomePage() {
           if (!response.ok) throw new Error(result.error || "Unable to record attendance.");
           console.log("[QR] Attendance write completed:", result.data);
           const eventTime = checkOutTime || result.data?.check_in_time;
-          setIsCheckedIn(!checkOutTime);
+          await loadTodayAttendance(employeeId);
           setMessage(
             checkOutTime
               ? `Checked out at ${new Date(eventTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.`
@@ -164,7 +202,11 @@ export default function WorkerHomePage() {
             Current Status
           </span>
           <h2 className="text-2xl font-black text-slate-900 mt-1">
-            {isCheckedIn ? "Checked In at Factory" : "Not Checked In Today"}
+            {todayRecord?.check_out_time
+              ? `Day complete — worked ${Number(todayRecord.hours_worked || 0).toFixed(2)} hours`
+              : isCheckedIn
+              ? `Checked In at ${new Date(todayRecord?.check_in_time || "").toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+              : "Not Checked In Today"}
           </h2>
           <p className="text-sm text-slate-600 mt-1">
             {isCheckedIn
@@ -209,7 +251,7 @@ export default function WorkerHomePage() {
             Today&apos;s Hours
           </p>
           <p className="text-2xl font-black text-slate-900 mt-1">
-            {isCheckedIn ? "5h 15m" : "0h 00m"}
+            {Number(todayRecord?.hours_worked || 0).toFixed(2)} hrs
           </p>
         </Card>
 
