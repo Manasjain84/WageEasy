@@ -235,8 +235,11 @@ export default function SignupPage() {
       }
     }
 
-    if (!joinCode.trim() || joinCode.trim().length < 4) {
-      setErrorMsg("Please enter a valid 6-character factory join code.");
+    const cleanCodePreview = joinCode.trim().toUpperCase().replace(/\s/g, "");
+    if (!cleanCodePreview || !/^[A-Z0-9]{6}$/.test(cleanCodePreview)) {
+      setErrorMsg(
+        "Please enter a valid 6-character factory join code (letters and numbers only, e.g. WAG8X2)."
+      );
       return;
     }
 
@@ -248,7 +251,8 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const cleanCode = joinCode.trim().toUpperCase();
+      // cleanCodePreview is already validated as 6-char uppercase alphanumeric above
+      const cleanCode = cleanCodePreview;
 
       // 1. Lookup organization by join_code first to validate
       const { data: orgData, error: lookupError } = await supabase
@@ -259,7 +263,7 @@ export default function SignupPage() {
 
       if (lookupError || !orgData) {
         throw new Error(
-          `Invalid factory join code "${cleanCode}". Please verify with your factory owner/supervisor.`
+          `No organization found for join code "${cleanCode}". Please double-check the code with your supervisor.`
         );
       }
 
@@ -639,19 +643,21 @@ export default function SignupPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Factory 6-Digit Join Code *
+                  Factory Join Code * (6 characters)
                 </label>
                 <input
                   type="text"
-                  maxLength={10}
+                  maxLength={6}
                   placeholder="e.g. WAG8X2"
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  onChange={(e) =>
+                    setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+                  }
                   required
                   className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none uppercase font-mono font-bold tracking-widest text-center text-lg"
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Ask your factory owner or supervisor for this code.
+                  6-character code (letters &amp; numbers). Ask your factory owner or supervisor.
                 </p>
               </div>
 

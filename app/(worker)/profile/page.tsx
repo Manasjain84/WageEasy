@@ -9,7 +9,7 @@ export default function WorkerProfilePage() {
     name: "Ramesh Kumar",
     phone: "+91 98765 43210",
     factory: "Precision Manufacturing Pvt Ltd",
-    joinCode: "FACT-8821",
+    joinCode: "WAG8X2",
     status: "active",
     wageRate: "₹ 700 / day",
     joinedDate: "12 Jan 2026",

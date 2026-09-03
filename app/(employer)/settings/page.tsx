@@ -8,7 +8,7 @@ import { Button } from "@/components/Button";
 export default function EmployerSettingsPage() {
   const [orgName, setOrgName] = useState("Precision Manufacturing Pvt Ltd");
   const [orgAddress, setOrgAddress] = useState("Plot 42, Industrial Area Phase II, Gurugram, Haryana");
-  const [joinCode] = useState("FACT-8821");
+  const [joinCode] = useState("WAG8X2");
   const [dailyHours, setDailyHours] = useState(8);
   const [otMultiplier, setOtMultiplier] = useState(1.5);
   const [workDays, setWorkDays] = useState(26);
@@ -42,7 +42,7 @@ export default function EmployerSettingsPage() {
         {/* Join Code Card */}
         <Card
           title="Factory Join Code"
-          subtitle="Share this unique 8-character code with new workers to allow them to register and join your organization."
+          subtitle="Share this unique 6-character code with new workers to allow them to register and join your organization."
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
             <div>
