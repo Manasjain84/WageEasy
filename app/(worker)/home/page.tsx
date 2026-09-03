@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { StatusPill } from "@/components/StatusPill";
 import { getUserProfile } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { Html5Qrcode } from "html5-qrcode";
 
 export default function WorkerHomePage() {
@@ -15,13 +16,24 @@ export default function WorkerHomePage() {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [workerName, setWorkerName] = useState("");
+  const [wageRate, setWageRate] = useState<number | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const processingScanRef = useRef(false);
 
   useEffect(() => {
     getUserProfile().then(async (profile) => {
       if (!profile.employeeId || !profile.orgId) return;
       setEmployeeId(profile.employeeId);
       setOrgId(profile.orgId);
+      setWorkerName(profile.name || "");
+      const { data: employee, error: employeeError } = await supabase
+        .from("employees")
+        .select("wage_rate")
+        .eq("auth_user_id", profile.userId)
+        .single();
+      if (employeeError) throw employeeError;
+      setWageRate(employee?.wage_rate ?? null);
       const response = await fetch(
         `/api/attendance?org_id=${encodeURIComponent(profile.orgId)}&date=${new Date().toISOString().split("T")[0]}`
       );
@@ -64,27 +76,50 @@ export default function WorkerHomePage() {
       { facingMode: "environment" },
       { fps: 10, qrbox: { width: 250, height: 250 } },
       async (decodedText) => {
+        if (processingScanRef.current) return;
+        console.log("[QR] Success callback triggered:", decodedText);
         let scannedOrgId: string | null = null;
         try {
           scannedOrgId = new URL(decodedText).searchParams.get("org_id");
         } catch {
           console.warn("[QR] Ignoring invalid QR payload:", decodedText);
         }
-        if (scannedOrgId !== orgId) return;
+        if (scannedOrgId !== orgId) {
+          console.warn("[QR] Organization mismatch:", { scannedOrgId, workerOrgId: orgId });
+          return;
+        }
 
-        const response = await fetch("/api/attendance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ employee_id: employeeId, org_id: orgId }),
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Unable to record attendance.");
-        setIsCheckedIn(true);
-        setMessage("Check-in recorded successfully.");
-        setScanning(false);
-        await scanner.stop();
-        scanner.clear();
-        scannerRef.current = null;
+        processingScanRef.current = true;
+        try {
+          const checkOutTime = isCheckedIn ? new Date().toISOString() : undefined;
+          const response = await fetch("/api/attendance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employee_id: employeeId,
+              org_id: orgId,
+              check_out_time: checkOutTime,
+            }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.error || "Unable to record attendance.");
+          console.log("[QR] Attendance write completed:", result.data);
+          const eventTime = checkOutTime || result.data?.check_in_time;
+          setIsCheckedIn(!checkOutTime);
+          setMessage(
+            checkOutTime
+              ? `Checked out at ${new Date(eventTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.`
+              : `Checked in at ${new Date(eventTime).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.`
+          );
+          setScanning(false);
+          await scanner.stop();
+          scanner.clear();
+          scannerRef.current = null;
+        } catch (error) {
+          console.error("[QR] Attendance write failed:", error);
+          setMessage(error instanceof Error ? error.message : "Unable to record attendance.");
+          processingScanRef.current = false;
+        }
       },
       (errorMessage) => {
         console.debug("[QR] Scan frame error:", errorMessage);
@@ -108,10 +143,12 @@ export default function WorkerHomePage() {
             <span>Good Morning</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 mt-0.5">
-            Ramesh Kumar
+            {workerName || "Loading employee..."}
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Daily Wage: <strong className="text-slate-800 font-bold">₹ 700</strong>
+            Daily Wage: <strong className="text-slate-800 font-bold">
+              {wageRate === null ? "Loading..." : `₹ ${wageRate}`}
+            </strong>
           </p>
         </div>
 

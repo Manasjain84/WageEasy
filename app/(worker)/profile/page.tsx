@@ -58,7 +58,13 @@ export default function WorkerProfilePage() {
       <Card className="p-5 border-2 border-slate-200 rounded-2xl bg-white space-y-4">
         <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
           <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-black text-xl border-2 border-emerald-300">
-            RK
+            {profile.name
+              .split(/\s+/)
+              .filter(Boolean)
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
           </div>
           <div>
             <div className="flex items-center gap-2">
