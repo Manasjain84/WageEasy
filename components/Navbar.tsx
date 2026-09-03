@@ -19,6 +19,8 @@ import {
 import { clsx } from "clsx";
 import { UserRole } from "@/lib/supabase";
 import { getUserProfile } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { clearAuthCookies } from "@/lib/auth";
 
 interface NavbarProps {
   role?: UserRole;
@@ -34,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [resolvedOrgName, setResolvedOrgName] = useState(orgName);
   const [resolvedUserName, setResolvedUserName] = useState(userName);
+  const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -59,6 +62,34 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   const links = role === "employer" ? employerLinks : workerLinks;
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Unable to clear the server session.");
+      }
+
+      clearAuthCookies();
+      window.location.replace("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setLoggingOut(false);
+    }
+  };
+
+  const handleMobileLogout = () => {
+    setMobileMenuOpen(false);
+    void handleLogout();
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-slate-900 text-white shadow-md">
@@ -112,13 +143,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {resolvedUserName} ({role})
               </span>
             )}
-            <Link
-              href="/login"
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
               className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </Link>
+              <span>{loggingOut ? "Logging out..." : "Logout"}</span>
+            </button>
           </div>
 
           {/* Mobile menu toggle */}
@@ -163,14 +196,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Logged in as <strong className="text-slate-200">{resolvedUserName}</strong>
               </span>
             )}
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
+            <button
+              type="button"
+              onClick={handleMobileLogout}
+              disabled={loggingOut}
               className="flex items-center gap-1 text-sm text-red-400 font-semibold"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </Link>
+              <span>{loggingOut ? "Logging out..." : "Sign Out"}</span>
+            </button>
           </div>
         </div>
       )}
