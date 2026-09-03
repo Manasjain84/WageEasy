@@ -1,19 +1,48 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { User, Phone, Building2, CreditCard, LogOut, CheckCircle } from "lucide-react";
 import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
+import { getUserProfile } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 export default function WorkerProfilePage() {
-  const profile = {
-    name: "Ramesh Kumar",
-    phone: "+91 98765 43210",
-    factory: "Precision Manufacturing Pvt Ltd",
-    joinCode: "WAG8X2",
+  const [profile, setProfile] = useState({
+    name: "",
+    phone: "",
+    factory: "",
+    joinCode: "",
     status: "active",
-    wageRate: "₹ 700 / day",
-    joinedDate: "12 Jan 2026",
-  };
+    wageRate: "₹ 0 / day",
+  });
+
+  useEffect(() => {
+    getUserProfile().then(async (userProfile) => {
+      if (!userProfile.employeeId || !userProfile.orgId) return;
+      const { data: employee } = await supabase
+        .from("employees")
+        .select("name, phone, status, wage_rate")
+        .eq("id", userProfile.employeeId)
+        .single();
+      const { data: organization } = await supabase
+        .from("organizations")
+        .select("name, join_code")
+        .eq("id", userProfile.orgId)
+        .single();
+      if (employee && organization) {
+        setProfile({
+          name: employee.name,
+          phone: employee.phone || "",
+          factory: organization.name,
+          joinCode: organization.join_code,
+          status: employee.status,
+          wageRate: `₹ ${employee.wage_rate} / day`,
+        });
+      }
+    }).catch((error) => console.error("Error loading worker profile:", error));
+  }, []);
 
   return (
     <div className="space-y-6">

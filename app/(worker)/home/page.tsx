@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { StatusPill } from "@/components/StatusPill";
 import { getUserProfile } from "@/lib/auth";
+import { Html5Qrcode } from "html5-qrcode";
 
 export default function WorkerHomePage() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
@@ -14,9 +15,7 @@ export default function WorkerHomePage() {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanningRef = useRef(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
     getUserProfile().then(async (profile) => {
@@ -36,7 +35,10 @@ export default function WorkerHomePage() {
       );
     }).catch((error) => setMessage(error.message));
 
-    return () => streamRef.current?.getTracks().forEach((track) => track.stop());
+    return () => {
+      scannerRef.current?.stop().catch((error) => console.error("Error stopping QR scanner:", error));
+      scannerRef.current?.clear();
+    };
   }, []);
 
   const scanQrCode = async () => {
@@ -44,32 +46,32 @@ export default function WorkerHomePage() {
       setMessage("Your employee profile is not ready yet.");
       return;
     }
-    const BarcodeDetectorClass = (
-      window as Window & {
-        BarcodeDetector?: new (options?: { formats: string[] }) => {
-          detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue: string }>>;
-        };
-      }
-    ).BarcodeDetector;
-    if (!BarcodeDetectorClass) {
-      setMessage("QR scanning is not supported by this browser.");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      console.error("[QR] Camera API unavailable", {
+        secureContext: window.isSecureContext,
+        userAgent: navigator.userAgent,
+      });
+      setMessage("Camera access requires HTTPS and a supported mobile browser.");
       return;
     }
 
     setMessage(null);
     setScanning(true);
-    scanningRef.current = true;
-    streamRef.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    if (videoRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      await videoRef.current.play();
-    }
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    const scanner = new Html5Qrcode("wageeasy-qr-reader");
+    scannerRef.current = scanner;
+    await scanner.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      async (decodedText) => {
+        let scannedOrgId: string | null = null;
+        try {
+          scannedOrgId = new URL(decodedText).searchParams.get("org_id");
+        } catch {
+          console.warn("[QR] Ignoring invalid QR payload:", decodedText);
+        }
+        if (scannedOrgId !== orgId) return;
 
-    const detector = new BarcodeDetectorClass({ formats: ["qr_code"] });
-    const scan = async () => {
-      if (!videoRef.current || !scanningRef.current) return;
-      const codes = await detector.detect(videoRef.current);
-      if (codes[0]?.rawValue === `wageeasy://check-in?org_id=${orgId}`) {
         const response = await fetch("/api/attendance", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,17 +82,19 @@ export default function WorkerHomePage() {
         setIsCheckedIn(true);
         setMessage("Check-in recorded successfully.");
         setScanning(false);
-        scanningRef.current = false;
-        streamRef.current?.getTracks().forEach((track) => track.stop());
-        return;
+        await scanner.stop();
+        scanner.clear();
+        scannerRef.current = null;
+      },
+      (errorMessage) => {
+        console.debug("[QR] Scan frame error:", errorMessage);
       }
-      window.setTimeout(scan, 250);
-    };
-    scan().catch((error) => {
+    ).catch((error) => {
+      console.error("[QR] Scanner failed to start:", error);
       setScanning(false);
-      scanningRef.current = false;
-      setMessage(error.message);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      setMessage(`Unable to open camera: ${error.message || error}`);
+      scanner.clear();
+      scannerRef.current = null;
     });
   };
 
@@ -149,7 +153,7 @@ export default function WorkerHomePage() {
             </span>
           </Button>
         </div>
-        {scanning && <video ref={videoRef} className="mx-auto w-full max-w-sm rounded-xl" />}
+        {scanning && <div id="wageeasy-qr-reader" className="mx-auto w-full max-w-sm overflow-hidden rounded-xl" />}
         {message && <p className="text-sm font-semibold text-slate-700">{message}</p>}
 
         <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">

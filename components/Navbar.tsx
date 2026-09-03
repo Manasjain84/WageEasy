@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { UserRole } from "@/lib/supabase";
+import { getUserProfile } from "@/lib/auth";
 
 interface NavbarProps {
   role?: UserRole;
@@ -31,7 +32,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   userName,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [resolvedOrgName, setResolvedOrgName] = useState(orgName);
+  const [resolvedUserName, setResolvedUserName] = useState(userName);
   const pathname = usePathname();
+
+  useEffect(() => {
+    getUserProfile()
+      .then((profile) => {
+        if (profile.orgName) setResolvedOrgName(profile.orgName);
+        if (profile.name) setResolvedUserName(profile.name);
+      })
+      .catch((error) => console.error("Error loading navigation profile:", error));
+  }, []);
 
   const employerLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -64,7 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex flex-col leading-tight">
                 <span>WageEasy</span>
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">
-                  {orgName}
+                  {resolvedOrgName}
                 </span>
               </div>
             </Link>
@@ -95,9 +107,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* User profile & Logout */}
           <div className="hidden md:flex items-center gap-4">
-            {userName && (
+            {resolvedUserName && (
               <span className="text-xs text-slate-300 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
-                {userName} ({role})
+                {resolvedUserName} ({role})
               </span>
             )}
             <Link
@@ -146,9 +158,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             );
           })}
           <div className="pt-4 mt-2 border-t border-slate-800 flex items-center justify-between">
-            {userName && (
+            {resolvedUserName && (
               <span className="text-xs text-slate-400">
-                Logged in as <strong className="text-slate-200">{userName}</strong>
+                Logged in as <strong className="text-slate-200">{resolvedUserName}</strong>
               </span>
             )}
             <Link

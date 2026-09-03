@@ -8,7 +8,7 @@ export default function WorkerLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-slate-100">
-      <Navbar role="worker" orgName="Precision Manufacturing" userName="Ramesh Kumar" />
+      <Navbar role="worker" />
       <main className="flex-1 max-w-lg w-full mx-auto p-4 sm:p-6">
         {children}
       </main>

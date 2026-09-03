@@ -15,6 +15,7 @@ import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
 import { Button } from "@/components/Button";
 import { getUserProfile } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 type AttendanceRow = {
   id: string;
@@ -28,12 +29,20 @@ type AttendanceRow = {
 
 export default function EmployerDashboardPage() {
   const [recentAttendance, setRecentAttendance] = useState<AttendanceRow[]>([]);
+  const [organization, setOrganization] = useState<{ name: string; address: string | null } | null>(null);
 
   useEffect(() => {
     let active = true;
     const fetchAttendance = async () => {
       const profile = await getUserProfile();
       if (!profile.orgId) return;
+      const { data: organizationData, error: organizationError } = await supabase
+        .from("organizations")
+        .select("name, address")
+        .eq("id", profile.orgId)
+        .single();
+      if (organizationError) throw organizationError;
+      setOrganization(organizationData);
       const response = await fetch(
         `/api/attendance?org_id=${encodeURIComponent(profile.orgId)}&date=${new Date().toISOString().split("T")[0]}`
       );
@@ -66,10 +75,10 @@ export default function EmployerDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            Factory Attendance Overview
+            {organization?.name || "Factory Attendance Overview"}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time daily attendance and shift metrics for today
+            {organization?.address || "Real-time daily attendance and shift metrics for today"}
           </p>
         </div>
 

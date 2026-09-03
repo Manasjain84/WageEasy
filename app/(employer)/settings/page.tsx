@@ -9,8 +9,8 @@ import { getUserProfile } from "@/lib/auth";
 import QRCode from "qrcode";
 
 export default function EmployerSettingsPage() {
-  const [orgName, setOrgName] = useState("Precision Manufacturing Pvt Ltd");
-  const [orgAddress, setOrgAddress] = useState("Plot 42, Industrial Area Phase II, Gurugram, Haryana");
+  const [orgName, setOrgName] = useState("");
+  const [orgAddress, setOrgAddress] = useState("");
   const [joinCode, setJoinCode] = useState<string | null>(null);
   const [dailyHours, setDailyHours] = useState(8);
   const [otMultiplier, setOtMultiplier] = useState(1.5);
@@ -29,7 +29,7 @@ export default function EmployerSettingsPage() {
 
       const { data, error } = await supabase
         .from("organizations")
-        .select("join_code")
+        .select("name, address, join_code")
         .eq("id", profile.orgId)
         .single();
 
@@ -38,6 +38,8 @@ export default function EmployerSettingsPage() {
       }
 
       setOrgId(profile.orgId);
+      setOrgName(data.name);
+      setOrgAddress(data.address || "");
       setJoinCode(data.join_code.trim().toUpperCase());
       setQrCodeUrl(await QRCode.toDataURL(`wageeasy://check-in?org_id=${profile.orgId}`));
     }
