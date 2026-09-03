@@ -13,7 +13,9 @@ import {
   Clock,
   LogOut,
   Mail,
-  KeyRound,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -30,27 +32,27 @@ export default function SignupPage() {
   const [pendingOrgName, setPendingOrgName] = useState<string | null>(null);
   const [isPendingWorker, setIsPendingWorker] = useState(false);
 
-  // Unauthenticated email OTP fallback state (if visited directly without login)
-  const [authStep, setAuthStep] = useState<"email" | "otp">("email");
-  const [authEmail, setAuthEmail] = useState("");
-  const [authOtp, setAuthOtp] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
-
   // Form Mode & Inputs
   const [roleMode, setRoleMode] = useState<"choose" | "employer" | "worker">("choose");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Employer state
   const [orgName, setOrgName] = useState("");
   const [orgAddress, setOrgAddress] = useState("");
   const [employerName, setEmployerName] = useState("");
+  const [employerEmail, setEmployerEmail] = useState("");
+  const [employerPassword, setEmployerPassword] = useState("");
+  const [employerConfirmPassword, setEmployerConfirmPassword] = useState("");
 
   // Worker state
   const [workerName, setWorkerName] = useState("");
+  const [workerEmail, setWorkerEmail] = useState("");
   const [workerPhone, setWorkerPhone] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [workerPassword, setWorkerPassword] = useState("");
+  const [workerConfirmPassword, setWorkerConfirmPassword] = useState("");
 
   // Check auth session on load
   useEffect(() => {
@@ -102,76 +104,27 @@ export default function SignupPage() {
     return result;
   };
 
-  // Direct Email OTP handlers for unauthenticated users on signup
-  const handleSendSignupOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    const clean = authEmail.trim().toLowerCase();
-    if (!clean || !clean.includes("@")) {
-      setErrorMsg("Please enter a valid email address.");
-      return;
-    }
-    setAuthLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ email: clean });
-      if (error) throw error;
-      setSuccessMsg(`Verification code sent to ${clean}`);
-      setAuthStep("otp");
-    } catch (err: any) {
-      setErrorMsg(err.message || "Failed to send verification code.");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleVerifySignupOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    if (!authOtp || authOtp.trim().length < 6) {
-      setErrorMsg("Please enter the 6-digit verification code.");
-      return;
-    }
-    const clean = authEmail.trim().toLowerCase();
-    setAuthLoading(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: clean,
-        token: authOtp.trim(),
-        type: "email",
-      });
-      if (error) throw error;
-      if (data?.user) {
-        setCurrentUser(data.user);
-        const profile = await getUserProfile(data.user.id);
-        if (profile.role === "employer") {
-          setAuthCookies(profile);
-          router.push("/dashboard");
-        } else if (profile.role === "worker") {
-          setAuthCookies(profile);
-          if (profile.status === "active") {
-            router.push("/home");
-          } else {
-            setIsPendingWorker(true);
-            setPendingOrgName(profile.orgName || "Factory Organization");
-          }
-        }
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Invalid verification code.");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   // Employer Creation Handler
   const handleCreateOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
 
-    if (!currentUser?.id) {
-      setErrorMsg("Please verify your email before creating an organization.");
+    const cleanEmail = (currentUser?.email || employerEmail).trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setErrorMsg("Please enter a valid email address.");
       return;
+    }
+
+    if (!currentUser) {
+      if (employerPassword.length < 6) {
+        setErrorMsg("Password must be at least 6 characters long.");
+        return;
+      }
+
+      if (employerPassword !== employerConfirmPassword) {
+        setErrorMsg("Passwords do not match. Please re-enter.");
+        return;
+      }
     }
 
     if (!orgName.trim()) {
@@ -182,14 +135,34 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const generatedCode = generateJoinCode();
-      const userEmail = currentUser.email || authEmail.trim().toLowerCase();
+      let authUserId = currentUser?.id;
 
-      // 1. Insert into organizations table
+      // 1. Sign up user in Supabase Auth if not already authenticated
+      if (!authUserId) {
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: employerPassword,
+        });
+
+        if (authError) {
+          throw authError;
+        }
+
+        if (!authData?.user) {
+          throw new Error("Unable to create user account. Please try again.");
+        }
+
+        authUserId = authData.user.id;
+        setCurrentUser(authData.user);
+      }
+
+      const generatedCode = generateJoinCode();
+
+      // 2. Insert into organizations table
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .insert({
-          owner_id: currentUser.id,
+          owner_id: authUserId,
           name: orgName.trim(),
           address: orgAddress.trim() || null,
           join_code: generatedCode,
@@ -207,12 +180,12 @@ export default function SignupPage() {
         throw orgError;
       }
 
-      // 2. Insert owner as active employer in employees table
+      // 3. Insert owner as active employer in employees table
       const { error: empError } = await supabase.from("employees").insert({
         org_id: orgData.id,
-        auth_user_id: currentUser.id,
+        auth_user_id: authUserId,
         name: employerName.trim() || `${orgName.trim()} Admin`,
-        email: userEmail,
+        email: cleanEmail,
         role: "employer",
         status: "active",
         wage_rate: 0,
@@ -222,13 +195,13 @@ export default function SignupPage() {
         console.warn("Notice during employee record creation:", empError.message);
       }
 
-      // 3. Set auth cookies and redirect to dashboard
+      // 4. Set auth cookies and redirect to dashboard
       setAuthCookies({
-        userId: currentUser.id,
+        userId: authUserId,
         role: "employer",
         status: "active",
         orgId: orgData.id,
-        email: userEmail,
+        email: cleanEmail,
       });
 
       router.push("/dashboard");
@@ -243,11 +216,23 @@ export default function SignupPage() {
   const handleJoinOrganization = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    setSuccessMsg(null);
 
-    if (!currentUser?.id) {
-      setErrorMsg("Please verify your email before submitting a join request.");
+    const cleanEmail = (currentUser?.email || workerEmail).trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setErrorMsg("Please enter a valid email address.");
       return;
+    }
+
+    if (!currentUser) {
+      if (workerPassword.length < 6) {
+        setErrorMsg("Password must be at least 6 characters long.");
+        return;
+      }
+
+      if (workerPassword !== workerConfirmPassword) {
+        setErrorMsg("Passwords do not match. Please re-enter.");
+        return;
+      }
     }
 
     if (!joinCode.trim() || joinCode.trim().length < 4) {
@@ -265,7 +250,7 @@ export default function SignupPage() {
     try {
       const cleanCode = joinCode.trim().toUpperCase();
 
-      // 1. Lookup organization by join_code
+      // 1. Lookup organization by join_code first to validate
       const { data: orgData, error: lookupError } = await supabase
         .from("organizations")
         .select("id, name")
@@ -278,14 +263,33 @@ export default function SignupPage() {
         );
       }
 
-      const userEmail = currentUser.email || authEmail.trim().toLowerCase();
+      let authUserId = currentUser?.id;
 
-      // 2. Insert employee request with status 'pending'
+      // 2. Sign up user in Supabase Auth if not already authenticated
+      if (!authUserId) {
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: workerPassword,
+        });
+
+        if (authError) {
+          throw authError;
+        }
+
+        if (!authData?.user) {
+          throw new Error("Unable to create user account. Please try again.");
+        }
+
+        authUserId = authData.user.id;
+        setCurrentUser(authData.user);
+      }
+
+      // 3. Insert employee request with status 'pending'
       const { error: insertError } = await supabase.from("employees").insert({
         org_id: orgData.id,
-        auth_user_id: currentUser.id,
+        auth_user_id: authUserId,
         name: workerName.trim(),
-        email: userEmail,
+        email: cleanEmail,
         phone: workerPhone.trim() || null,
         role: "worker",
         status: "pending",
@@ -302,19 +306,19 @@ export default function SignupPage() {
         throw insertError;
       }
 
-      // 3. Set cookies and show waiting for approval screen
+      // 4. Set cookies and show waiting for approval screen
       setAuthCookies({
-        userId: currentUser.id,
+        userId: authUserId,
         role: "worker",
         status: "pending",
         orgId: orgData.id,
-        email: userEmail,
+        email: cleanEmail,
       });
 
       setPendingOrgName(orgData.name);
       setIsPendingWorker(true);
     } catch (err: any) {
-      setErrorMsg(err.message || "Failed to join organization.");
+      setErrorMsg(err.message || "Failed to submit join request.");
     } finally {
       setLoading(false);
     }
@@ -371,7 +375,7 @@ export default function SignupPage() {
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> What happens next?
               </p>
               <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                <li>Your supervisor will verify your email and assign your daily wage rate.</li>
+                <li>Your supervisor will verify your details and assign your daily wage rate.</li>
                 <li>Once approved, you can immediately start scanning QR codes to log attendance.</li>
               </ul>
             </div>
@@ -397,124 +401,21 @@ export default function SignupPage() {
     );
   }
 
-  // State B: Unauthenticated User - Prompt Email OTP first
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-              Join or Create Factory
-            </h1>
-            <p className="text-sm text-slate-600 mt-1">
-              Verify your email address to get started
-            </p>
-          </div>
-
-          <Card className="border border-slate-200 shadow-md">
-            {errorMsg && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-800 font-medium">
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {authStep === "email" ? (
-              <form onSubmit={handleSendSignupOtp} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Mail className="w-5 h-5" />
-                    </div>
-                    <input
-                      type="email"
-                      placeholder="name@example.com"
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      required
-                      className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-300 rounded-xl text-base text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={authLoading}
-                  className="w-full py-3.5 text-base flex items-center justify-center gap-2"
-                >
-                  <span>Continue with Email Code</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifySignupOtp} className="space-y-4">
-                <p className="text-xs text-slate-600 text-center">
-                  Enter 6-digit verification code sent to <strong>{authEmail}</strong>
-                </p>
-                <div>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <KeyRound className="w-5 h-5" />
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      placeholder="123456"
-                      value={authOtp}
-                      onChange={(e) => setAuthOtp(e.target.value)}
-                      required
-                      className="w-full pl-11 pr-4 py-3 text-center tracking-widest text-xl font-bold bg-white border-2 border-slate-300 rounded-xl text-slate-900 focus:border-emerald-600 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={authLoading}
-                  className="w-full py-3.5 text-base"
-                >
-                  Verify & Continue
-                </Button>
-
-                <button
-                  type="button"
-                  onClick={() => setAuthStep("email")}
-                  className="w-full text-center text-xs text-slate-500 hover:text-slate-800 underline"
-                >
-                  Change email address
-                </button>
-              </form>
-            )}
-
-            <div className="mt-6 pt-4 border-t border-slate-100 text-center">
-              <p className="text-xs text-slate-600">
-                Already registered?{" "}
-                <Link href="/login" className="font-bold text-emerald-600 hover:underline">
-                  Log in
-                </Link>
-              </p>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // State C: Authenticated User - Choose Role & Complete Registration
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-            Set Up Your Account
+            {roleMode === "choose"
+              ? "Get Started with WageEasy"
+              : roleMode === "employer"
+              ? "Create Organization"
+              : "Join Organization"}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Verified as <strong className="text-slate-900">{currentUser.email}</strong>
+            {currentUser
+              ? `Logged in as ${currentUser.email}`
+              : "Sign up with email and password"}
           </p>
         </div>
 
@@ -542,7 +443,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700">
-                    Create an Organization
+                    Create an Organization (Employer)
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     For factory owners & managers to track daily shifts, wage rates, and payroll.
@@ -564,7 +465,7 @@ export default function SignupPage() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-700">
-                    Join an Organization
+                    Join an Organization (Worker)
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     For factory workers to scan QR attendance and view hours & payslips.
@@ -625,6 +526,76 @@ export default function SignupPage() {
                 />
               </div>
 
+              {!currentUser && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      Email Address *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="owner@company.com"
+                        value={employerEmail}
+                        onChange={(e) => setEmployerEmail(e.target.value)}
+                        required
+                        className="w-full pl-10 pr-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      Password * (min. 6 characters)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={employerPassword}
+                        onChange={(e) => setEmployerPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full pl-10 pr-10 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      Confirm Password *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={employerConfirmPassword}
+                        onChange={(e) => setEmployerConfirmPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full pl-10 pr-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
                 A 6-character unique join code will be generated automatically for your workers.
               </div>
@@ -668,19 +639,6 @@ export default function SignupPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Phone Number (Optional)
-                </label>
-                <input
-                  type="tel"
-                  placeholder="e.g. 9876543210"
-                  value={workerPhone}
-                  onChange={(e) => setWorkerPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Factory 6-Digit Join Code *
                 </label>
                 <input
@@ -697,6 +655,89 @@ export default function SignupPage() {
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Phone Number (Optional)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={workerPhone}
+                  onChange={(e) => setWorkerPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                />
+              </div>
+
+              {!currentUser && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      Email Address *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="worker@gmail.com"
+                        value={workerEmail}
+                        onChange={(e) => setWorkerEmail(e.target.value)}
+                        required
+                        className="w-full pl-10 pr-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      Password * (min. 6 characters)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={workerPassword}
+                        onChange={(e) => setWorkerPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full pl-10 pr-10 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">
+                      Confirm Password *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={workerConfirmPassword}
+                        onChange={(e) => setWorkerConfirmPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        className="w-full pl-10 pr-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Button
                 type="submit"
                 variant="primary"
@@ -710,14 +751,18 @@ export default function SignupPage() {
           )}
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-red-500 hover:text-red-700 font-semibold"
-            >
-              Sign Out
-            </button>
-            <Link href="/login" className="text-xs text-slate-500 hover:text-slate-800">
-              Switch Account
+            {currentUser ? (
+              <button
+                onClick={handleSignOut}
+                className="text-xs text-red-500 hover:text-red-700 font-semibold"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <span className="text-xs text-slate-500">Already registered?</span>
+            )}
+            <Link href="/login" className="text-xs font-bold text-emerald-600 hover:underline">
+              Log in to existing account
             </Link>
           </div>
         </Card>

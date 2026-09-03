@@ -37,7 +37,7 @@ export default function HomePage() {
           <ShieldCheck className="w-8 h-8 text-emerald-600 mb-2" />
           <h2 className="font-bold text-slate-900">Role-Based Access</h2>
           <p className="text-sm text-slate-600 mt-1">
-            Clean views tailored for workers and employers with phone OTP auth.
+            Clean views tailored for workers and employers with secure email auth.
           </p>
         </div>
       </div>
@@ -45,7 +45,7 @@ export default function HomePage() {
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
         <Link href="/login" className="flex-1">
           <Button variant="primary" className="w-full py-3.5 text-base flex items-center gap-2">
-            <span>Log In (Email + OTP)</span>
+            <span>Log In</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         </Link>
