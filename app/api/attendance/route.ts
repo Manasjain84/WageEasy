@@ -16,18 +16,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await createServiceClient()
+    const supabase = createServiceClient();
+    const { data, error } = await supabase
       .from("attendance_records")
-      .select("*, employee:employees(name, email, phone)")
+      .select("*")
       .eq("org_id", orgId)
       .eq("date", date)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
 
+    const employeeIds = (data || []).map((record) => record.employee_id);
+    const { data: employees, error: employeesError } = employeeIds.length
+      ? await supabase
+          .from("employees")
+          .select("id, name, email, phone")
+          .in("id", employeeIds)
+      : { data: [], error: null };
+
+    if (employeesError) throw employeesError;
+
+    const employeesById = new Map(
+      (employees || []).map((employee) => [employee.id, employee])
+    );
+    const attendance = (data || []).map((record) => ({
+      ...record,
+      employee: employeesById.get(record.employee_id) || null,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: data || [],
+      data: attendance,
       meta: { orgId, date },
       message: "Attendance records fetched successfully.",
     });
@@ -89,7 +108,7 @@ export async function POST(request: NextRequest) {
       otHours = calc.otHours;
     }
 
-    const { data: attendance, error: attendanceError } = await supabase
+    const { data: attendanceRecord, error: attendanceError } = await supabase
       .from("attendance_records")
       .upsert(
         {
@@ -105,10 +124,23 @@ export async function POST(request: NextRequest) {
         },
         { onConflict: "employee_id,date" }
       )
-      .select("*, employee:employees(name, email, phone)")
+      .select("*")
       .single();
 
     if (attendanceError) throw attendanceError;
+
+    const { data: employeeDetails, error: employeeDetailsError } = await supabase
+      .from("employees")
+      .select("id, name, email, phone")
+      .eq("id", employee_id)
+      .single();
+
+    if (employeeDetailsError) throw employeeDetailsError;
+
+    const attendance = {
+      ...attendanceRecord,
+      employee: employeeDetails,
+    };
 
     return NextResponse.json({
       success: true,
