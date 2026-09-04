@@ -21,6 +21,7 @@ import { UserRole } from "@/lib/supabase";
 import { getUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { clearAuthCookies } from "@/lib/auth";
+import { useTranslation } from "@/components/I18nProvider";
 
 interface NavbarProps {
   role?: UserRole;
@@ -38,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [resolvedUserName, setResolvedUserName] = useState(userName);
   const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
+  const { locale, setLocale, t } = useTranslation();
 
   useEffect(() => {
     getUserProfile()
@@ -49,16 +51,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const employerLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/employees", label: "Employees", icon: Users },
-    { href: "/payroll", label: "Payroll", icon: CreditCard },
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
+    { href: "/employees", label: t("nav.employees"), icon: Users },
+    { href: "/payroll", label: t("nav.payroll"), icon: CreditCard },
+    { href: "/settings", label: t("nav.settings"), icon: Settings },
   ];
 
   const workerLinks = [
-    { href: "/home", label: "Attendance", icon: Home },
-    { href: "/history", label: "My History", icon: Clock },
-    { href: "/profile", label: "Profile", icon: User },
+    { href: "/home", label: t("nav.attendance"), icon: Home },
+    { href: "/history", label: t("nav.history"), icon: Clock },
+    { href: "/profile", label: t("nav.profile"), icon: User },
   ];
 
   const links = role === "employer" ? employerLinks : workerLinks;
@@ -138,6 +140,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* User profile & Logout */}
           <div className="hidden md:flex items-center gap-4">
+            <div className="flex rounded-md border border-slate-700 overflow-hidden text-xs" aria-label={t("common.language")}>
+              <button type="button" onClick={() => setLocale("en")} className={clsx("px-2 py-1", locale === "en" ? "bg-emerald-600 text-white" : "text-slate-300")}>EN</button>
+              <button type="button" onClick={() => setLocale("hi")} className={clsx("px-2 py-1", locale === "hi" ? "bg-emerald-600 text-white" : "text-slate-300")}>हिन्दी</button>
+            </div>
             {resolvedUserName && (
               <span className="text-xs text-slate-300 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
                 {resolvedUserName} ({role})
@@ -150,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-400 transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span>{loggingOut ? "Logging out..." : "Logout"}</span>
+              <span>{loggingOut ? t("nav.loggingOut") : t("nav.logout")}</span>
             </button>
           </div>
 
@@ -159,7 +165,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              aria-label="Toggle navigation"
+              aria-label={t("nav.toggle")}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -191,9 +197,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             );
           })}
           <div className="pt-4 mt-2 border-t border-slate-800 flex items-center justify-between">
+            <div className="flex rounded-md border border-slate-700 overflow-hidden text-xs">
+              <button type="button" onClick={() => setLocale("en")} className={clsx("px-2 py-1", locale === "en" ? "bg-emerald-600 text-white" : "text-slate-300")}>EN</button>
+              <button type="button" onClick={() => setLocale("hi")} className={clsx("px-2 py-1", locale === "hi" ? "bg-emerald-600 text-white" : "text-slate-300")}>हिन्दी</button>
+            </div>
             {resolvedUserName && (
               <span className="text-xs text-slate-400">
-                Logged in as <strong className="text-slate-200">{resolvedUserName}</strong>
+                {t("nav.loggedInAs")} <strong className="text-slate-200">{resolvedUserName}</strong>
               </span>
             )}
             <button
@@ -203,7 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1 text-sm text-red-400 font-semibold"
             >
               <LogOut className="w-4 h-4" />
-              <span>{loggingOut ? "Logging out..." : "Sign Out"}</span>
+              <span>{loggingOut ? t("nav.loggingOut") : t("nav.signOut")}</span>
             </button>
           </div>
         </div>

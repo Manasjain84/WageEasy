@@ -8,6 +8,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile, setAuthCookies } from "@/lib/auth";
+import { useTranslation } from "@/components/I18nProvider";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,12 +25,12 @@ export default function LoginPage() {
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
-      setErrorMsg("Please enter a valid email address.");
+      setErrorMsg(t("common.validEmail"));
       return;
     }
 
     if (!password) {
-      setErrorMsg("Please enter your password.");
+      setErrorMsg(t("common.passwordRequired"));
       return;
     }
 
@@ -71,8 +73,8 @@ export default function LoginPage() {
     } catch (err: any) {
       const message =
         err.message === "Invalid login credentials"
-          ? "Invalid email or password. Please check your credentials and try again."
-          : err.message || "Failed to sign in. Please try again.";
+          ? t("common.invalidCredentials")
+          : err.message || t("common.signInFailed");
       setErrorMsg(message);
     } finally {
       setLoading(false);
@@ -88,10 +90,10 @@ export default function LoginPage() {
             <Factory className="w-8 h-8" />
           </div>
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-            Welcome to WageEasy
+            {t("login.welcome")}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Factory Attendance & Automated Payroll
+            {t("login.subtitle")}
           </p>
         </div>
 
@@ -110,7 +112,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="block text-sm font-semibold text-slate-700 mb-1.5"
               >
-                Email Address
+                {t("common.email")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -119,7 +121,7 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
-                  placeholder="name@company.com"
+                  placeholder={t("common.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -133,7 +135,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="block text-sm font-semibold text-slate-700 mb-1.5"
               >
-                Password
+                {t("common.password")}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -152,7 +154,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? t("common.hidePassword") : t("common.showPassword")}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -165,19 +167,19 @@ export default function LoginPage() {
               isLoading={loading}
               className="w-full py-3.5 text-base flex items-center justify-center gap-2"
             >
-              <span>Log In</span>
+              <span>{t("common.login")}</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </form>
 
           <div className="mt-6 pt-4 border-t border-slate-100 text-center">
             <p className="text-xs text-slate-600">
-              New to WageEasy?{" "}
+              {t("login.newUser")}{" "}
               <Link
                 href="/signup"
                 className="font-bold text-emerald-600 hover:underline"
               >
-                Create organization or join with code
+                {t("common.signup")}
               </Link>
             </p>
           </div>

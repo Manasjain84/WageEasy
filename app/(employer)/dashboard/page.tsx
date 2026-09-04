@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "@/components/I18nProvider";
 import Link from "next/link";
 import {
   Users,
@@ -28,6 +29,7 @@ type AttendanceRow = {
 };
 
 export default function EmployerDashboardPage() {
+  const { t } = useTranslation();
   const [recentAttendance, setRecentAttendance] = useState<AttendanceRow[]>([]);
   const [organization, setOrganization] = useState<{ name: string; address: string | null } | null>(null);
 
@@ -85,11 +87,11 @@ export default function EmployerDashboardPage() {
         <div className="flex items-center gap-2">
           <Button variant="outline" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <span>{t("employer.exportCsv")}</span>
           </Button>
           <Link href="/payroll">
             <Button variant="primary" className="flex items-center gap-1.5 text-xs sm:text-sm">
-              <span>Run Payroll</span>
+              <span>{t("employer.runPayroll")}</span>
               <ArrowUpRight className="w-4 h-4" />
             </Button>
           </Link>
@@ -120,8 +122,8 @@ export default function EmployerDashboardPage() {
 
       {/* Attendance Status Data Table */}
       <Card
-        title="Today's Shift Attendance"
-        subtitle="Live worker check-ins, recorded hours, and overtime"
+        title={t("employer.shiftAttendance") }
+        subtitle={t("employer.liveAttendance") }
         action={
           <div className="flex items-center gap-2">
             <button className="flex items-center gap-1 text-xs font-semibold text-slate-600 border border-slate-300 rounded-lg px-2.5 py-1.5 hover:bg-slate-50">
@@ -135,13 +137,13 @@ export default function EmployerDashboardPage() {
           <table className="w-full text-left text-sm text-slate-600 border-collapse">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-y border-slate-200">
               <tr>
-                <th className="py-3 px-4 font-semibold">Worker Name</th>
-                <th className="py-3 px-4 font-semibold">Phone</th>
-                <th className="py-3 px-4 font-semibold">Check In</th>
-                <th className="py-3 px-4 font-semibold">Check Out</th>
-                <th className="py-3 px-4 font-semibold">Hours</th>
-                <th className="py-3 px-4 font-semibold">OT Hours</th>
-                <th className="py-3 px-4 font-semibold">Status</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.workerName")}</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.phone")}</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.checkIn")}</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.checkOut")}</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.hours")}</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.otHours")}</th>
+                <th className="py-3 px-4 font-semibold">{t("employer.status")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

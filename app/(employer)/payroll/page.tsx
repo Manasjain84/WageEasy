@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "@/components/I18nProvider";
 import { CreditCard, Download, Play, CheckCircle2, Calendar } from "lucide-react";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -29,6 +30,7 @@ const formatMoney = (value: number) =>
   `₹ ${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function EmployerPayrollPage() {
+  const { t } = useTranslation();
   const today = new Date();
   const [periodStart, setPeriodStart] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0]
@@ -103,7 +105,7 @@ export default function EmployerPayrollPage() {
         </Button>
       </div>
 
-      <Card title="Payroll Period" subtitle="Choose the attendance dates included in this cycle">
+      <Card title={t("employer.payrollPeriod") } subtitle={t("employer.chooseDates") }>
         <div className="flex flex-col sm:flex-row gap-4">
           <label className="text-sm font-semibold text-slate-700">
             Start date
@@ -123,26 +125,26 @@ export default function EmployerPayrollPage() {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-emerald-400" />
-              <span className="text-xs uppercase tracking-wider text-slate-300 font-bold">Current Payroll Cycle</span>
+              <span className="text-xs uppercase tracking-wider text-slate-300 font-bold">{t("employer.currentCycle")}</span>
               <StatusPill status={result?.cycle.status || "draft"} size="sm" className="bg-slate-700 text-white border-slate-600" />
             </div>
             <h2 className="text-2xl font-black">{periodStart} – {periodEnd}</h2>
-            <p className="text-xs text-slate-300">Total Eligible Workers: <strong>{totals.employees} Active</strong></p>
+            <p className="text-xs text-slate-300">{t("employer.eligibleWorkers")}: <strong>{totals.employees} {t("status.active")}</strong></p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-t md:border-t-0 md:border-l border-slate-700 pt-4 md:pt-0 md:pl-6">
-            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">Base Pay</p><p className="text-lg font-bold">{formatMoney(totals.basePay)}</p></div>
-            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">OT Pay</p><p className="text-lg font-bold text-emerald-400">{formatMoney(totals.otPay)}</p></div>
-            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">Deductions</p><p className="text-lg font-bold text-red-400">{formatMoney(totals.deductions)}</p></div>
-            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">Total Payout</p><p className="text-xl font-black">{formatMoney(totals.finalAmount)}</p></div>
+            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">{t("employer.basePay")}</p><p className="text-lg font-bold">{formatMoney(totals.basePay)}</p></div>
+            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">{t("employer.otPay")}</p><p className="text-lg font-bold text-emerald-400">{formatMoney(totals.otPay)}</p></div>
+            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">{t("employer.deductions")}</p><p className="text-lg font-bold text-red-400">{formatMoney(totals.deductions)}</p></div>
+            <div><p className="text-[11px] text-slate-400 uppercase font-semibold">{t("employer.totalPayout")}</p><p className="text-xl font-black">{formatMoney(totals.finalAmount)}</p></div>
           </div>
         </div>
       </Card>
 
-      <Card title="Worker Payslip Breakdown" subtitle="Real attendance totals and calculated pay for active employees" action={<Button variant="secondary" className="flex items-center gap-1 text-xs"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /><span>Draft Saved</span></Button>}>
+      <Card title={t("employer.payslip") } subtitle={t("employer.payslipSubtitle") } action={<Button variant="secondary" className="flex items-center gap-1 text-xs"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /><span>{t("employer.draftSaved")}</span></Button>}>
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-y border-slate-200">
-              <tr><th className="py-3 px-4">Worker</th><th className="py-3 px-4">Days</th><th className="py-3 px-4">Total Hours</th><th className="py-3 px-4">OT Hours</th><th className="py-3 px-4">Base Pay</th><th className="py-3 px-4">OT Pay</th><th className="py-3 px-4">Deductions</th><th className="py-3 px-4">Net Amount</th></tr>
+              <tr><th className="py-3 px-4">{t("employer.worker")}</th><th className="py-3 px-4">{t("employer.days")}</th><th className="py-3 px-4">{t("employer.totalHours")}</th><th className="py-3 px-4">{t("employer.otHours")}</th><th className="py-3 px-4">{t("employer.basePay")}</th><th className="py-3 px-4">{t("employer.otPay")}</th><th className="py-3 px-4">{t("employer.deductions")}</th><th className="py-3 px-4">{t("employer.netAmount")}</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {result?.payslips.map((slip) => (
@@ -159,7 +161,7 @@ export default function EmployerPayrollPage() {
               ))}
             </tbody>
           </table>
-          {!loading && result?.payslips.length === 0 && <p className="text-center py-10 text-slate-500">No active employees found.</p>}
+          {!loading && result?.payslips.length === 0 && <p className="text-center py-10 text-slate-500">{t("employer.noEmployees")}</p>}
         </div>
       </Card>
     </div>

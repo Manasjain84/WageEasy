@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "@/components/I18nProvider";
 import { Users, UserPlus, Check, X, Edit3, Search, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
@@ -9,6 +10,7 @@ import { supabase, Employee } from "@/lib/supabase";
 import { getUserProfile } from "@/lib/auth";
 
 export default function EmployerEmployeesPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"active" | "pending">("active");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -229,7 +231,7 @@ export default function EmployerEmployeesPage() {
 
         <Button variant="primary" className="flex items-center gap-2 text-sm">
           <UserPlus className="w-4 h-4" />
-          <span>Add Employee</span>
+          <span>{t("employer.addEmployee")}</span>
         </Button>
       </div>
 
@@ -281,7 +283,7 @@ export default function EmployerEmployeesPage() {
           }`}
         >
           <Clock className="w-4 h-4" />
-          <span>Pending Approvals</span>
+          <span>{t("employer.pendingApprovals")}</span>
           {pendingRequests.length > 0 && (
             <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold">
               {pendingRequests.length}
@@ -293,14 +295,14 @@ export default function EmployerEmployeesPage() {
       {/* Tab 1: Active Employees */}
       {activeTab === "active" && (
         <Card
-          title="Registered Workers"
-          subtitle="Active workforce eligible for QR shift attendance and payroll"
+          title={t("employer.registeredWorkers") }
+          subtitle={t("employer.activeWorkforce") }
           action={
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search worker by name, email or phone..."
+                placeholder={t("employer.searchWorkers") }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-48 sm:w-64"
@@ -317,12 +319,12 @@ export default function EmployerEmployeesPage() {
               <table className="w-full text-left text-sm text-slate-600">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500 border-y border-slate-200">
                   <tr>
-                    <th className="py-3 px-4 font-semibold">Name</th>
-                    <th className="py-3 px-4 font-semibold">Contact</th>
-                    <th className="py-3 px-4 font-semibold">Daily Wage Rate</th>
-                    <th className="py-3 px-4 font-semibold">Joined Date</th>
-                    <th className="py-3 px-4 font-semibold">Status</th>
-                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    <th className="py-3 px-4 font-semibold">{t("employer.name")}</th>
+                    <th className="py-3 px-4 font-semibold">{t("employer.contact")}</th>
+                    <th className="py-3 px-4 font-semibold">{t("employer.dailyWageRate")}</th>
+                    <th className="py-3 px-4 font-semibold">{t("employer.joinedDate")}</th>
+                    <th className="py-3 px-4 font-semibold">{t("employer.status")}</th>
+                    <th className="py-3 px-4 font-semibold text-right">{t("employer.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -364,13 +366,13 @@ export default function EmployerEmployeesPage() {
       {/* Tab 2: Pending Join Requests */}
       {activeTab === "pending" && (
         <Card
-          title="Pending Join Requests"
-          subtitle="Workers who used your factory join code and are waiting for your approval and daily wage assignment"
+          title={t("employer.pendingRequests")}
+          subtitle={t("employer.pendingSubtitle")}
         >
           {pendingRequests.length === 0 ? (
             <div className="text-center py-12 text-slate-500 text-sm space-y-1">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="font-bold text-slate-800">All caught up!</p>
+              <p className="font-bold text-slate-800">{t("employer.allCaughtUp")}</p>
               <p className="text-xs text-slate-500">
                 There are currently no pending worker requests. Share your factory join code to onboard new workers.
               </p>
@@ -400,7 +402,7 @@ export default function EmployerEmployeesPage() {
 
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1.5 mr-2">
-                      <label className="text-xs font-semibold text-slate-600">Daily Wage (₹):</label>
+                      <label className="text-xs font-semibold text-slate-600">{t("employer.dailyWage")}:</label>
                       <input
                         type="number"
                         value={assignedRates[req.id] ?? 650}
@@ -427,7 +429,7 @@ export default function EmployerEmployeesPage() {
                       className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-bold hover:bg-red-200 transition-colors disabled:opacity-50"
                     >
                       <X className="w-4 h-4" />
-                      <span>Reject</span>
+                      <span>{t("employer.reject")}</span>
                     </button>
                   </div>
                 </div>

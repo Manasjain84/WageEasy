@@ -6,6 +6,7 @@ import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
 import { getUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "@/components/I18nProvider";
 
 type HistoryRecord = {
   id: string;
@@ -37,6 +38,7 @@ export default function WorkerHistoryPage() {
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function loadHistory() {
@@ -75,10 +77,10 @@ export default function WorkerHistoryPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          Attendance & Work History
+          {t("worker.historyTitle")}
         </h1>
         <p className="text-xs text-slate-500 mt-1 font-medium">
-          Your recorded check-ins, check-outs, and working hours
+          {t("worker.historySubtitle")}
         </p>
       </div>
 
@@ -90,13 +92,13 @@ export default function WorkerHistoryPage() {
 
       {loading ? (
         <Card className="p-8 text-center text-sm text-slate-500">
-          Loading attendance history...
+          {t("worker.loadingHistory")}
         </Card>
       ) : records.length === 0 ? (
         <Card className="p-8 text-center text-sm text-slate-500">
           <Clock className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-          <p className="font-bold text-slate-700">No attendance records yet</p>
-          <p className="mt-1">Your check-in and check-out records will appear here.</p>
+          <p className="font-bold text-slate-700">{t("worker.noRecords")}</p>
+          <p className="mt-1">{t("worker.noRecordsHint")}</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -117,19 +119,19 @@ export default function WorkerHistoryPage() {
 
               <div className="grid grid-cols-3 gap-2 text-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Check In</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400">{t("worker.checkIn")}</p>
                   <p className="text-xs font-bold text-slate-800 mt-0.5">
                     {formatTime(record.check_in_time)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Check Out</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400">{t("worker.checkOut")}</p>
                   <p className="text-xs font-bold text-slate-800 mt-0.5">
                     {formatTime(record.check_out_time)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Hours Worked</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400">{t("worker.hoursWorked")}</p>
                   <p className="text-xs font-bold text-emerald-700 mt-0.5">
                     {Number(record.hours_worked || 0).toFixed(2)} hrs
                   </p>
@@ -137,7 +139,7 @@ export default function WorkerHistoryPage() {
               </div>
 
               <p className="text-xs text-slate-500 font-medium px-1">
-                Overtime:{" "}
+                {t("worker.overtime")}:{" "}
                 <strong className="text-purple-700 font-bold">
                   {Number(record.ot_hours || 0).toFixed(2)} hrs
                 </strong>

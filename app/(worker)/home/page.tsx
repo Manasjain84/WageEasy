@@ -8,8 +8,10 @@ import { StatusPill } from "@/components/StatusPill";
 import { getUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { Html5Qrcode } from "html5-qrcode";
+import { useTranslation } from "@/components/I18nProvider";
 
 export default function WorkerHomePage() {
+  const { t } = useTranslation();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [todayRecord, setTodayRecord] = useState<{
     check_in_time: string | null;
@@ -178,13 +180,13 @@ export default function WorkerHomePage() {
         <div>
           <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-xs uppercase tracking-wide">
             <Sun className="w-4 h-4" />
-            <span>Good Morning</span>
+            <span>{t("worker.goodMorning")}</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 mt-0.5">
             {workerName || "Loading employee..."}
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Daily Wage: <strong className="text-slate-800 font-bold">
+            {t("worker.dailyWage")}: <strong className="text-slate-800 font-bold">
               {wageRate === null ? "Loading..." : `₹ ${wageRate}`}
             </strong>
           </p>
@@ -199,14 +201,14 @@ export default function WorkerHomePage() {
       <Card className="border-2 border-emerald-600/30 bg-emerald-50/50 p-6 text-center rounded-3xl">
         <div className="mb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-            Current Status
+            {t("worker.currentStatus")}
           </span>
           <h2 className="text-2xl font-black text-slate-900 mt-1">
             {todayRecord?.check_out_time
               ? `Day complete — worked ${Number(todayRecord.hours_worked || 0).toFixed(2)} hours`
               : isCheckedIn
               ? `Checked In at ${new Date(todayRecord?.check_in_time || "").toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
-              : "Not Checked In Today"}
+              : t("worker.notCheckedIn")}
           </h2>
           <p className="text-sm text-slate-600 mt-1">
             {isCheckedIn
@@ -228,7 +230,7 @@ export default function WorkerHomePage() {
           >
             <QrCode className="w-8 h-8" />
             <span className="text-xl">
-              {isCheckedIn ? "Scan QR to Check Out" : "Scan QR to Check In"}
+              {isCheckedIn ? t("worker.scanOut") : t("worker.scanIn")}
             </span>
           </Button>
         </div>
@@ -237,7 +239,7 @@ export default function WorkerHomePage() {
 
         <div className="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Verified GPS & QR Factory Scanner</span>
+          <span>{t("worker.verified")}</span>
         </div>
       </Card>
 
@@ -248,7 +250,7 @@ export default function WorkerHomePage() {
             <Clock className="w-5 h-5" />
           </div>
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Today&apos;s Hours
+            {t("worker.todayHours")}
           </p>
           <p className="text-2xl font-black text-slate-900 mt-1">
             {Number(todayRecord?.hours_worked || 0).toFixed(2)} hrs

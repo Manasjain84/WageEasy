@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "@/components/I18nProvider";
 import { Settings, Copy, Check, Save } from "lucide-react";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -9,6 +10,7 @@ import { getUserProfile } from "@/lib/auth";
 import QRCode from "qrcode";
 
 export default function EmployerSettingsPage() {
+  const { t } = useTranslation();
   const [orgName, setOrgName] = useState("");
   const [orgAddress, setOrgAddress] = useState("");
   const [joinCode, setJoinCode] = useState<string | null>(null);
@@ -76,8 +78,8 @@ export default function EmployerSettingsPage() {
       <form onSubmit={handleSave} className="space-y-6">
         {/* Join Code Card */}
         <Card
-          title="Factory Join Code"
-          subtitle="Share this unique 6-character code with new workers to allow them to register and join your organization."
+          title={t("employer.joinCode") }
+          subtitle={t("employer.joinCodeSubtitle") }
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
             <div>
@@ -100,13 +102,13 @@ export default function EmployerSettingsPage() {
           {qrCodeUrl && (
             <div className="mt-4 text-center">
               <img src={qrCodeUrl} alt="Factory attendance QR code" className="mx-auto w-48 h-48" />
-              <p className="text-xs text-slate-500 mt-2">Workers scan this code to check in.</p>
+              <p className="text-xs text-slate-500 mt-2">{t("employer.scanHint")}</p>
             </div>
           )}
         </Card>
 
         {/* General Details Card */}
-        <Card title="Organization Profile" subtitle="General company information">
+        <Card title={t("employer.orgProfile") } subtitle={t("employer.companyInfo") }>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">
@@ -137,8 +139,8 @@ export default function EmployerSettingsPage() {
 
         {/* Wage Rules Card */}
         <Card
-          title="Attendance & Overtime Rules"
-          subtitle="Standard rules applied during automated payroll processing"
+          title={t("employer.rules") }
+          subtitle={t("employer.rulesSubtitle") }
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -154,7 +156,7 @@ export default function EmployerSettingsPage() {
                 required
                 className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
               />
-              <p className="text-[11px] text-slate-500 mt-1">Hours before OT kicks in</p>
+              <p className="text-[11px] text-slate-500 mt-1">{t("employer.hoursBeforeOt")}</p>
             </div>
 
             <div>
@@ -171,7 +173,7 @@ export default function EmployerSettingsPage() {
                 required
                 className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
               />
-              <p className="text-[11px] text-slate-500 mt-1">e.g. 1.5x hourly rate</p>
+              <p className="text-[11px] text-slate-500 mt-1">{t("employer.multiplierHint")}</p>
             </div>
 
             <div>
@@ -187,7 +189,7 @@ export default function EmployerSettingsPage() {
                 required
                 className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
               />
-              <p className="text-[11px] text-slate-500 mt-1">Days per standard month</p>
+              <p className="text-[11px] text-slate-500 mt-1">{t("employer.daysHint")}</p>
             </div>
           </div>
         </Card>
@@ -196,7 +198,7 @@ export default function EmployerSettingsPage() {
         <div className="flex items-center gap-3">
           <Button type="submit" variant="primary" className="flex items-center gap-2">
             <Save className="w-4 h-4" />
-            <span>Save Settings</span>
+            <span>{t("employer.save")}</span>
           </Button>
           {saved && (
             <span className="text-sm font-bold text-emerald-600 animate-fade-in flex items-center gap-1">

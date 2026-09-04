@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { useTranslation } from "@/components/I18nProvider";
 
 export type StatusType =
   | "present"
@@ -24,6 +27,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
   className,
   size = "md",
 }) => {
+  const { t } = useTranslation();
   const normalized = status.toLowerCase();
 
   const statusStyles: Record<string, string> = {
@@ -67,7 +71,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
           "bg-slate-400": !["present", "active", "paid", "approved", "pending", "incomplete", "absent"].includes(normalized),
         })}
       />
-      {status}
+      {t(`status.${normalized}`)}
     </span>
   );
 };

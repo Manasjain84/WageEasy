@@ -22,8 +22,10 @@ import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
 import { supabase } from "@/lib/supabase";
 import { getUserProfile, setAuthCookies, clearAuthCookies } from "@/lib/auth";
+import { useTranslation } from "@/components/I18nProvider";
 
 export default function SignupPage() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   // Auth & Profile State
@@ -142,24 +144,24 @@ export default function SignupPage() {
 
     const cleanEmail = (currentUser?.email || employerEmail).trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
-      setErrorMsg("Please enter a valid email address.");
+      setErrorMsg(t("common.validEmail"));
       return;
     }
 
     if (!currentUser) {
       if (employerPassword.length < 6) {
-        setErrorMsg("Password must be at least 6 characters long.");
+        setErrorMsg(t("common.shortPassword"));
         return;
       }
 
       if (employerPassword !== employerConfirmPassword) {
-        setErrorMsg("Passwords do not match. Please re-enter.");
+        setErrorMsg(t("common.passwordMismatch"));
         return;
       }
     }
 
     if (!orgName.trim()) {
-      setErrorMsg("Organization name is required.");
+      setErrorMsg(t("common.orgRequired"));
       return;
     }
 
@@ -253,18 +255,18 @@ export default function SignupPage() {
 
     const cleanEmail = (currentUser?.email || workerEmail).trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes("@")) {
-      setErrorMsg("Please enter a valid email address.");
+      setErrorMsg(t("common.validEmail"));
       return;
     }
 
     if (!currentUser) {
       if (workerPassword.length < 6) {
-        setErrorMsg("Password must be at least 6 characters long.");
+        setErrorMsg(t("common.shortPassword"));
         return;
       }
 
       if (workerPassword !== workerConfirmPassword) {
-        setErrorMsg("Passwords do not match. Please re-enter.");
+        setErrorMsg(t("common.passwordMismatch"));
         return;
       }
     }
@@ -278,7 +280,7 @@ export default function SignupPage() {
     }
 
     if (!workerName.trim()) {
-      setErrorMsg("Please enter your full name.");
+      setErrorMsg(t("common.fullNameRequired"));
       return;
     }
 
@@ -409,7 +411,7 @@ export default function SignupPage() {
       <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <div className="flex items-center gap-3 text-slate-600 font-semibold text-sm">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
-          <span>Loading account status...</span>
+          <span>{t("worker.loadingAccount")}</span>
         </div>
       </div>
     );
@@ -429,25 +431,23 @@ export default function SignupPage() {
               <div className="inline-block mb-2">
                 <StatusPill status="pending" size="md" />
               </div>
-              <h1 className="text-2xl font-black text-slate-900">
-                Waiting for Employer Approval
-              </h1>
+              <h1 className="text-2xl font-black text-slate-900">{t("signup.waiting")}</h1>
               <p className="text-sm text-slate-600 mt-2">
-                Your request to join{" "}
+                {t("signup.requestToJoin")}{" "}
                 <strong className="text-slate-900 font-bold">
-                  {pendingOrgName || "the factory"}
+                  {pendingOrgName || t("signup.factory")}
                 </strong>{" "}
-                has been submitted.
+                {t("signup.submitted")}
               </p>
             </div>
 
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs text-slate-600 space-y-2">
               <p className="flex items-center gap-1.5 font-bold text-slate-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> What happens next?
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> {t("signup.next")}
               </p>
               <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                <li>Your supervisor will verify your details and assign your daily wage rate.</li>
-                <li>Once approved, you can immediately start scanning QR codes to log attendance.</li>
+                <li>{t("worker.verifyDetails")}</li>
+                <li>{t("worker.approvedAttendance")}</li>
               </ul>
             </div>
 
@@ -456,15 +456,12 @@ export default function SignupPage() {
                 variant="outline"
                 onClick={() => router.refresh()}
                 className="w-full text-sm font-bold"
-              >
-                Check Approval Status
-              </Button>
+              >{t("signup.checkStatus")}</Button>
               <button
                 onClick={handleSignOut}
                 className="flex items-center justify-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold py-2"
               >
-                <LogOut className="w-3.5 h-3.5" /> Sign Out
-              </button>
+                <LogOut className="w-3.5 h-3.5" />{t("signup.signOut")}</button>
             </div>
           </Card>
         </div>
@@ -478,15 +475,15 @@ export default function SignupPage() {
         <div className="text-center mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
             {roleMode === "choose"
-              ? "Get Started with WageEasy"
+              ? t("signup.started")
               : roleMode === "employer"
-              ? "Create Organization"
-              : "Join Organization"}
+              ? t("signup.createOrg")
+              : t("signup.joinOrg")}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
             {currentUser
               ? `Logged in as ${currentUser.email}`
-              : "Sign up with email and password"}
+              : t("signup.emailSignup")}
           </p>
         </div>
 
@@ -513,12 +510,8 @@ export default function SignupPage() {
                   <Building2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700">
-                    Create an Organization (Employer)
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    For factory owners & managers to track daily shifts, wage rates, and payroll.
-                  </p>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700">{t("signup.createEmployer")}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{t("signup.employerHint")}</p>
                 </div>
               </button>
 
@@ -535,12 +528,8 @@ export default function SignupPage() {
                   <UserCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-700">
-                    Join an Organization (Worker)
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    For factory workers to scan QR attendance and view hours & payslips.
-                  </p>
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-blue-700">{t("signup.joinWorker")}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{t("signup.workerHint")}</p>
                 </div>
               </button>
             </div>
@@ -554,16 +543,14 @@ export default function SignupPage() {
                 }}
                 className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 mb-2 font-medium"
               >
-                <ArrowLeft className="w-3.5 h-3.5" /> Back to options
+                <ArrowLeft className="w-3.5 h-3.5" /> {t("signup.back")}
               </button>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Organization / Factory Name *
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.orgName")}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Metro Garments Pvt Ltd"
+                  placeholder={t("worker.orgPlaceholder") }
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   required
@@ -572,12 +559,10 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Owner / Manager Name
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.ownerName")}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Rajesh Sharma"
+                  placeholder={t("worker.namePlaceholder") }
                   value={employerName}
                   onChange={(e) => setEmployerName(e.target.value)}
                   className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
@@ -585,12 +570,10 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Factory Address
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.factoryAddress")}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Sector 18, Industrial Area"
+                  placeholder={t("worker.addressPlaceholder") }
                   value={orgAddress}
                   onChange={(e) => setOrgAddress(e.target.value)}
                   className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
@@ -601,7 +584,7 @@ export default function SignupPage() {
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Email Address *
+                      {t("common.email")} *
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -609,7 +592,7 @@ export default function SignupPage() {
                       </div>
                       <input
                         type="email"
-                        placeholder="owner@company.com"
+                        placeholder={t("worker.ownerEmailPlaceholder") }
                         value={employerEmail}
                         onChange={(e) => setEmployerEmail(e.target.value)}
                         required
@@ -620,7 +603,7 @@ export default function SignupPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Password * (min. 6 characters)
+                      {t("common.password")} * (min. 6 characters)
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -646,9 +629,7 @@ export default function SignupPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Confirm Password *
-                    </label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.confirmPassword")}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <Lock className="w-4 h-4" />
@@ -668,7 +649,7 @@ export default function SignupPage() {
               )}
 
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
-                A 6-character unique join code will be generated automatically for your workers.
+                {t("signup.codeNotice")}
               </div>
 
               <Button
@@ -677,7 +658,7 @@ export default function SignupPage() {
                 isLoading={loading}
                 className="w-full py-3.5 text-base flex items-center justify-center gap-2 font-bold"
               >
-                <span>Create & Go to Dashboard</span>
+                <span>{t("worker.createDashboard")}</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
@@ -691,16 +672,14 @@ export default function SignupPage() {
                 }}
                 className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 mb-2 font-medium"
               >
-                <ArrowLeft className="w-3.5 h-3.5" /> Back to options
+                <ArrowLeft className="w-3.5 h-3.5" /> {t("signup.back")}
               </button>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Your Full Name *
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.fullName")}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Ramesh Kumar"
+                  placeholder={t("worker.workerNamePlaceholder") }
                   value={workerName}
                   onChange={(e) => setWorkerName(e.target.value)}
                   required
@@ -709,13 +688,11 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Factory Join Code * (6 characters)
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.joinCode")}</label>
                 <input
                   type="text"
                   maxLength={6}
-                  placeholder="e.g. WAG8X2"
+                  placeholder={t("worker.codePlaceholder") }
                   value={joinCode}
                   onChange={(e) =>
                     setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
@@ -729,12 +706,10 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">
-                  Phone Number (Optional)
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.phone")}</label>
                 <input
                   type="tel"
-                  placeholder="e.g. 9876543210"
+                  placeholder={t("worker.phonePlaceholder") }
                   value={workerPhone}
                   onChange={(e) => setWorkerPhone(e.target.value)}
                   className="w-full px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm text-slate-900 focus:border-emerald-600 focus:outline-none font-medium"
@@ -745,7 +720,7 @@ export default function SignupPage() {
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Email Address *
+                      {t("common.email")} *
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -753,7 +728,7 @@ export default function SignupPage() {
                       </div>
                       <input
                         type="email"
-                        placeholder="worker@gmail.com"
+                        placeholder={t("worker.workerEmailPlaceholder") }
                         value={workerEmail}
                         onChange={(e) => setWorkerEmail(e.target.value)}
                         required
@@ -764,7 +739,7 @@ export default function SignupPage() {
 
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Password * (min. 6 characters)
+                      {t("common.password")} * (min. 6 characters)
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -790,9 +765,7 @@ export default function SignupPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                      Confirm Password *
-                    </label>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">{t("signup.confirmPassword")}</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <Lock className="w-4 h-4" />
@@ -817,7 +790,7 @@ export default function SignupPage() {
                 isLoading={loading}
                 className="w-full py-3.5 text-base flex items-center justify-center gap-2 font-bold"
               >
-                <span>Submit Join Request</span>
+                <span>{t("worker.submitRequest")}</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </form>
@@ -828,15 +801,11 @@ export default function SignupPage() {
               <button
                 onClick={handleSignOut}
                 className="text-xs text-red-500 hover:text-red-700 font-semibold"
-              >
-                Sign Out
-              </button>
+              >{t("signup.signOut")}</button>
             ) : (
-              <span className="text-xs text-slate-500">Already registered?</span>
+              <span className="text-xs text-slate-500">{t("worker.alreadyRegistered")}</span>
             )}
-            <Link href="/login" className="text-xs font-bold text-emerald-600 hover:underline">
-              Log in to existing account
-            </Link>
+            <Link href="/login" className="text-xs font-bold text-emerald-600 hover:underline">{t("signup.loginExisting")}</Link>
           </div>
         </Card>
       </div>

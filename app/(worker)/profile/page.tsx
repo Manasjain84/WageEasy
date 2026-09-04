@@ -7,8 +7,10 @@ import { Card } from "@/components/Card";
 import { StatusPill } from "@/components/StatusPill";
 import { getUserProfile } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "@/components/I18nProvider";
 
 export default function WorkerProfilePage() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState({
     name: "",
     phone: "",
@@ -48,10 +50,10 @@ export default function WorkerProfilePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          My Profile & Factory Details
+          {t("worker.profileTitle")}
         </h1>
         <p className="text-xs text-slate-500 mt-1 font-medium">
-          Personal identification, registered factory affiliation, and wage information
+          {t("worker.profileSubtitle")}
         </p>
       </div>
 
@@ -80,11 +82,11 @@ export default function WorkerProfilePage() {
             <Building2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase">
-                Factory Affiliation
+                {t("worker.factory")}
               </p>
               <p className="font-bold text-slate-900 mt-0.5">{profile.factory}</p>
               <p className="text-xs text-slate-500 font-mono mt-0.5">
-                Join Code: {profile.joinCode}
+                {t("worker.joinCode")}: {profile.joinCode}
               </p>
             </div>
           </div>
@@ -93,13 +95,13 @@ export default function WorkerProfilePage() {
             <CreditCard className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase">
-                Agreed Wage Rate
+                {t("worker.wageRate")}
               </p>
               <p className="text-base font-black text-emerald-700 mt-0.5">
                 {profile.wageRate}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                Standard 8-Hour Daily Shift
+                {t("worker.standardShift")}
               </p>
             </div>
           </div>
@@ -111,7 +113,7 @@ export default function WorkerProfilePage() {
             className="w-full py-3 px-4 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center gap-2 text-sm font-bold transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            <span>Sign Out of Account</span>
+            <span>{t("worker.signOutAccount")}</span>
           </Link>
         </div>
       </Card>
